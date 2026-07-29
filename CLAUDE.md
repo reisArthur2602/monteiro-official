@@ -127,9 +127,8 @@ Cada domínio funcional deve manter seus arquivos próximos da rota ou do grupo 
 Exemplo:
 
 ```text
-src/
-└── app/
-    └── cases/
+app/
+└── cases/
         ├── page.tsx
         ├── loading.tsx
         ├── error.tsx
@@ -178,7 +177,6 @@ A estrutura é uma referência. Crie somente as pastas necessárias para cada do
 Estrutura de referência para uma aplicação Next.js única:
 
 ```text
-src/
 ├── app/
 │   ├── login/
 │   │   ├── page.tsx
@@ -347,7 +345,7 @@ A prioridade obrigatória é:
 Todos os componentes visuais reutilizáveis e sem regra de negócio devem ficar em:
 
 ```text
-src/components/ui/
+components/ui/
 ```
 
 Exemplos:
@@ -378,7 +376,7 @@ Exemplos:
 Componentes reutilizáveis que possuem contexto, composição ou regra de negócio devem ficar em:
 
 ```text
-src/components/shared/
+components/shared/
 ```
 
 Exemplos:
@@ -690,9 +688,8 @@ Toda consulta de leitura ao banco deve ficar em um arquivo separado dentro da pa
 Exemplo:
 
 ```text
-src/
-└── app/
-    └── cases/
+app/
+└── cases/
         └── queries/
             ├── list-cases.ts
             ├── get-case.ts
@@ -1195,7 +1192,7 @@ Regras:
 Crie:
 
 ```text
-src/proxy.ts
+proxy.ts
 ```
 
 Responsabilidades:
@@ -1251,7 +1248,7 @@ Regras:
 Use a pasta:
 
 ```text
-src/schemas/
+schemas/
 ```
 
 Organize por domínio quando a quantidade crescer:
@@ -1305,7 +1302,7 @@ Use um contrato discriminado para resultados de actions.
 Crie:
 
 ```text
-src/lib/action-result.ts
+lib/action-result.ts
 ```
 
 Exemplo:
@@ -1470,7 +1467,7 @@ Regras:
 Centralize o Prisma Client em:
 
 ```text
-src/lib/prisma.ts
+lib/prisma.ts
 ```
 
 Evite criar uma nova instância do Prisma Client em cada arquivo.
@@ -1567,7 +1564,7 @@ Não envie modelos completos do Prisma para o cliente por conveniência.
 Centralize e valide variáveis de ambiente em:
 
 ```text
-src/lib/env.ts
+lib/env.ts
 ```
 
 Exemplo:
