@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Inter, Source_Serif_4 } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
-import { QueryProvider } from "@/integrations";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryProvider, ThemeProvider } from "@/integrations";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 
@@ -99,19 +100,23 @@ type RootLayoutProps = Readonly<{
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="pt-BR">
-      <QueryProvider>
-        <body
-          className={cn(
-            ibmPlexMono.variable,
-            sourceSerif.variable,
-            inter.variable,
-          )}
-        >
-          {children}
-          <Toaster />
-        </body>
-      </QueryProvider>
+    <html lang="pt-BR" suppressHydrationWarning>
+      <body
+        className={cn(
+          ibmPlexMono.variable,
+          sourceSerif.variable,
+          inter.variable,
+        )}
+      >
+        <ThemeProvider>
+          <QueryProvider>
+            <TooltipProvider>
+              {children}
+              <Toaster />
+            </TooltipProvider>
+          </QueryProvider>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }
