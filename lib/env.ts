@@ -1,9 +1,13 @@
-import { z } from 'zod'
+import { z } from "zod";
 
 const envSchema = z.object({
-  DATABASE_URL: z.string().min(1, 'DATABASE_URL é obrigatória'),
-})
+  DATABASE_URL: z.string().min(1, "DATABASE_URL é obrigatória"),
+  JWT_SECRET: z
+    .string()
+    .min(32, "JWT_SECRET deve ter pelo menos 32 caracteres"),
+});
 
 export const env = envSchema.parse({
   DATABASE_URL: process.env.DATABASE_URL,
-})
+  JWT_SECRET: process.env.JWT_SECRET,
+});

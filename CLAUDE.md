@@ -90,7 +90,7 @@ Correto:
 ```ts
 import { Button } from '@/components/ui/button'
 import { prisma } from '@/lib/prisma'
-import { verifyAuth } from '@/lib/auth/verify-auth'
+import { verifyAuth } from '@/utils/auth/verify-auth'
 ```
 
 Evite cadeias longas:
@@ -211,18 +211,29 @@ Estrutura de referência para uma aplicação Next.js única:
 │   ├── ui/
 │   └── shared/
 ├── lib/
-│   ├── auth/
-│   │   ├── get-session.ts
-│   │   ├── redirect-auth.ts
-│   │   ├── redirect-role.ts
-│   │   ├── verify-auth.ts
-│   │   ├── verify-role.ts
-│   │   └── token.ts
-│   ├── action-result.ts
 │   ├── env.ts
 │   └── prisma.ts
+├── utils/
+│   ├── action-result.ts
+│   └── auth/
+│       ├── get-session.ts
+│       ├── redirect-auth.ts
+│       ├── redirect-role.ts
+│       ├── verify-auth.ts
+│       ├── verify-role.ts
+│       └── token.ts
 └── proxy.ts
 ```
+
+## Estrutura de diretórios
+
+- `app/` - rotas e pages do Next.js
+- `components/ui/` - componentes visuais primitivos do shadcn/ui
+- `components/shared/` - componentes reutilizáveis com lógica de negócio
+- `lib/` - apenas bibliotecas externas (Prisma, env)
+- `utils/` - funções utilitárias e helpers globais (autenticação, action-result, etc.)
+- `schemas/` - schemas Zod para validação
+- `integrations/` - integrações de bibliotecas (TanStack Query, etc.)
 
 Este projeto não usa:
 
@@ -233,6 +244,26 @@ Este projeto não usa:
 - configurações compartilhadas entre aplicações.
 
 Adapte a estrutura à necessidade real da feature. Não crie arquivos ou diretórios sem uso.
+
+---
+
+## 5a. Pasta `utils/` — Utilitários globais
+
+A pasta `utils/` centraliza helpers e funções utilitárias reutilizáveis em todo o projeto que não são bibliotecas externas.
+
+Exemplos:
+
+- `utils/action-result.ts` - Contrato discriminado para respostas de Server Actions
+- `utils/auth/` - Autenticação e autorização (getSession, redirectAuth, verifyAuth, verifyRole, etc.)
+
+Regras:
+
+- Exports devem estar em `utils/index.ts` para facilitar imports via `@/utils`
+- Não coloque lógica específica de features em `utils/`
+- Evite crescimento desorganizado: só mova para `utils/` quando for reutilizado em múltiplas features
+- Manter `utils/` limpo ajuda a distinguir do `lib/` (bibliotecas externas)
+
+---
 
 ## 6. Pages, layouts e Client Components
 
@@ -738,7 +769,7 @@ Exemplo:
 ```ts
 import { cache } from 'react'
 
-import { verifyAuth } from '@/lib/auth/verify-auth'
+import { verifyAuth } from '@/utils/auth/verify-auth'
 import { prisma } from '@/lib/prisma'
 
 type ListCasesInput = {
@@ -856,13 +887,14 @@ Nunca:
 Estrutura:
 
 ```text
-src/
-└── lib/
-    └── auth/
-        ├── get-session.ts
-        ├── redirect-auth.ts
-        ├── verify-auth.ts
-        └── token.ts
+utils/
+└── auth/
+    ├── get-session.ts
+    ├── redirect-auth.ts
+    ├── redirect-role.ts
+    ├── verify-auth.ts
+    ├── verify-role.ts
+    └── token.ts
 ```
 
 ### Cookie
@@ -952,7 +984,7 @@ Responsabilidades:
 Exemplo de uso:
 
 ```tsx
-import { redirectAuth } from '@/lib/auth/redirect-auth'
+import { redirectAuth } from '@/utils/auth/redirect-auth'
 
 const ProtectedPage = async () => {
   const user = await redirectAuth()
@@ -1031,7 +1063,7 @@ Uso em page:
 ```tsx
 import { Role } from '@prisma/client'
 
-import { redirectRole } from '@/lib/auth/redirect-role'
+import { redirectRole } from '@/utils/auth/redirect-role'
 
 const UsersPage = async () => {
   const user = await redirectRole([Role.ADMIN])
@@ -1095,7 +1127,7 @@ Uso em uma action:
 
 import { Role } from '@prisma/client'
 
-import { verifyRole } from '@/lib/auth/verify-role'
+import { verifyRole } from '@/utils/auth/verify-role'
 
 export const deleteUser = async (userId: string) => {
   try {
@@ -1299,10 +1331,10 @@ export type CreateUploadInput = z.infer<typeof createUploadSchema>
 
 Use um contrato discriminado para resultados de actions.
 
-Crie:
+Localizado em:
 
 ```text
-lib/action-result.ts
+utils/action-result.ts
 ```
 
 Exemplo:
@@ -1378,8 +1410,8 @@ Exemplo:
 
 import { revalidatePath } from 'next/cache'
 
-import type { ActionResult } from '@/lib/action-result'
-import { verifyAuth } from '@/lib/auth/verify-auth'
+import type { ActionResult } from '@/utils'
+import { verifyAuth } from '@/utils/auth/verify-auth'
 import { prisma } from '@/lib/prisma'
 import {
   createUploadSchema,
@@ -1742,7 +1774,47 @@ Exemplos:
 
 Evite submissão duplicada.
 
-Exemplo:
+Prefira usar `useMutation` do TanStack Query para gerenciar estado de operações assíncronas:
+
+```tsx
+"use client"
+
+import { useMutation } from "@tanstack/react-query"
+import { toast } from "sonner"
+
+import { createUpload } from "@/app/uploads/actions/create-upload"
+
+const UploadForm = () => {
+  const mutation = useMutation({
+    mutationFn: createUpload,
+    onSuccess: (result) => {
+      if (result.ok) {
+        toast.success(result.message)
+      } else {
+        toast.error(result.message)
+      }
+    },
+    onError: () => {
+      toast.error("Não foi possível concluir a operação")
+    },
+  })
+
+  const onSubmit = (values: CreateUploadInput) => {
+    mutation.mutate(values)
+  }
+
+  return (
+    <button
+      disabled={mutation.isPending}
+      onClick={() => onSubmit(values)}
+    >
+      {mutation.isPending ? "Enviando..." : "Enviar"}
+    </button>
+  )
+}
+```
+
+Para casos simples com `useTransition`, também é válido:
 
 ```tsx
 const [isPending, startTransition] = useTransition()

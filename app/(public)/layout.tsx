@@ -1,7 +1,9 @@
-import { PropsWithChildren } from 'react';
+import type { PropsWithChildren } from "react";
+import { redirectIfAuthenticated } from "@/utils";
 
-const PublicLayout = ({ children }: PropsWithChildren) => {
-    return children;
+const PublicLayout = async ({ children }: PropsWithChildren) => {
+  await redirectIfAuthenticated("/");
+  return children;
 };
 
 export default PublicLayout;
