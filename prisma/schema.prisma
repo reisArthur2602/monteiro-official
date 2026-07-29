@@ -18,6 +18,20 @@ enum UserRole {
     COLABORADOR
 }
 
+enum TemplateStatus {
+    RASCUNHO
+    ATIVO
+    INATIVO
+}
+
+enum TemplateCategory {
+    CONTRATO
+    PETICAO
+    PROCURACAO
+    NOTIFICACAO
+    OUTRO
+}
+
 model User {
     id           String   @id @default(uuid()) @db.Uuid
     name         String   @db.VarChar(150)
@@ -29,6 +43,67 @@ model User {
     updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
     deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
 
+    templatesCreated        Template[]        @relation("TemplateCreatedBy")
+    templatesUpdated        Template[]        @relation("TemplateUpdatedBy")
+    templateVersionsCreated TemplateVersion[] @relation("TemplateVersionCreatedBy")
+
     @@index([deletedAt])
     @@map("users")
+}
+
+model Template {
+    id String @id @default(uuid()) @db.Uuid
+
+    name        String  @db.VarChar(160)
+    description String? @db.VarChar(500)
+
+    category  TemplateCategory
+    legalArea String?          @map("legal_area") @db.VarChar(80)
+    status    TemplateStatus   @default(RASCUNHO)
+
+    currentVersion Int @default(1) @map("current_version")
+
+    createdById String @map("created_by_id") @db.Uuid
+    updatedById String @map("updated_by_id") @db.Uuid
+
+    createdBy User @relation("TemplateCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+    updatedBy User @relation("TemplateUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+
+    versions TemplateVersion[]
+
+    createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+    updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+    deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+    @@index([status, deletedAt])
+    @@index([category, deletedAt])
+    @@index([legalArea, deletedAt])
+    @@index([updatedAt])
+    @@map("templates")
+}
+
+model TemplateVersion {
+    id String @id @default(uuid()) @db.Uuid
+
+    templateId String @map("template_id") @db.Uuid
+    version    Int
+
+    contentHtml String @map("content_html") @db.Text
+
+    variables    Json
+    signatures   Json
+    pageSettings Json @map("page_settings")
+
+    createdById String @map("created_by_id") @db.Uuid
+
+    template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+    createdBy User @relation("TemplateVersionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+    createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+    @@unique([templateId, version])
+    @@index([templateId, createdAt])
+    @@map("template_versions")
 }
