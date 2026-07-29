@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { IBM_Plex_Mono, Inter, Source_Serif_4 } from 'next/font/google';
 
+import { QueryProvider } from '@/integrations';
 import { cn } from '@/lib/utils';
 import './globals.css';
 
@@ -99,9 +100,11 @@ type RootLayoutProps = Readonly<{
 export default function RootLayout({ children }: RootLayoutProps) {
     return (
         <html lang="pt-BR">
-            <body className={cn(ibmPlexMono.variable, sourceSerif.variable, inter.variable)}>
-                {children}
-            </body>
+            <QueryProvider>
+                <body className={cn(ibmPlexMono.variable, sourceSerif.variable, inter.variable)}>
+                    {children}
+                </body>
+            </QueryProvider>
         </html>
     );
 }
