@@ -133,7 +133,7 @@ export const ClientUpsertScreen = ({
           id={FORM_ID}
           onSubmit={form.handleSubmit(handleSubmit)}
           noValidate
-          className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]"
+          className="grid items-start gap-5 lg:grid-cols-[2fr_1fr]"
         >
           <div className="grid gap-4">
             <ClientIdentificationPanel />

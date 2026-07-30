@@ -1,7 +1,7 @@
-import { cache } from 'react';
+import { cache } from "react";
 
-import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/utils/auth';
+import { prisma } from "@/lib/prisma";
+import { verifyAuth } from "@/utils/auth";
 
 /**
  * UFs presentes na carteira, para alimentar o filtro de localidade.
@@ -10,17 +10,17 @@ import { verifyAuth } from '@/utils/auth';
  * o mesmo critério usado em `listClientResponsibles`.
  */
 export const listClientStates = cache(async () => {
-    await verifyAuth();
+  await verifyAuth();
 
-    const rows = await prisma.clientAddress.findMany({
-        where: {
-            state: { not: null },
-            client: { deletedAt: null },
-        },
-        select: { state: true },
-        distinct: ['state'],
-        orderBy: { state: 'asc' },
-    });
+  const rows = await prisma.clientAddress.findMany({
+    where: {
+      state: { not: null },
+      client: { deletedAt: null },
+    },
+    select: { state: true },
+    distinct: ["state"],
+    orderBy: { state: "asc" },
+  });
 
-    return rows.flatMap((row) => (row.state ? [row.state] : []));
+  return rows.flatMap((row) => (row.state ? [row.state] : []));
 });

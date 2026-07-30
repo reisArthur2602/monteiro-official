@@ -4,7 +4,6 @@ import { ChevronsUpDown, LogOut } from "lucide-react";
 import { useTransition } from "react";
 
 import { logout } from "@/app/(public)/auth/actions/logout";
-import type { UserRole } from "@/app/generated/prisma/enums";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -21,14 +20,9 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { getInitials } from "@/utils/get-initials";
+import { userRoleLabels } from "@/utils/user-role-labels";
 
 import type { SessionUser } from "../types/session-user";
-
-const roleLabels: Record<UserRole, string> = {
-  ADMINISTRADOR: "Administrador",
-  ADVOGADO: "Advogado",
-  COLABORADOR: "Colaborador",
-};
 
 type SidebarUserProps = {
   user: SessionUser;
@@ -61,7 +55,7 @@ export const SidebarUser = ({ user }: SidebarUserProps) => {
                   {user.name}
                 </span>
                 <span className="truncate text-xs text-sidebar-foreground/60">
-                  {roleLabels[user.role]}
+                  {userRoleLabels[user.role]}
                 </span>
               </div>
 

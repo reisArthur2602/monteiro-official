@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { getInitials } from "@/utils/get-initials";
 
-import { buildClientUpsertHref } from "../utils/build-clients-href";
+import { buildClientHref } from "../utils/build-clients-href";
 import { formatDocument } from "../utils/format-document";
 
 type ClientIdentityProps = {
@@ -37,7 +37,7 @@ export const ClientIdentity = ({
 
     <div className="min-w-0">
       <Link
-        href={buildClientUpsertHref(clientId)}
+        href={buildClientHref(clientId)}
         className="block truncate font-semibold outline-none hover:text-primary focus-visible:underline focus-visible:underline-offset-4"
       >
         {displayName ?? name}

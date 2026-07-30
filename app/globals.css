@@ -60,9 +60,13 @@
 }
 
 :root {
-  --font-heading:
-    "Source Serif 4", "Charter", "Iowan Old Style", "Palatino Linotype", Georgia,
-    serif;
+  /*
+   * --font-heading não é declarada aqui de propósito: quem define seu
+   * valor é o next/font em app/layout.tsx (Source_Serif_4 com
+   * variable: '--font-heading'), aplicado como classe no <body>. Um
+   * literal duplicado aqui ficaria dessincronizado se a fonte do layout
+   * mudasse no futuro, sem nenhum erro visível para avisar.
+   */
 
   --font-sans: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
@@ -219,7 +223,11 @@
   }
 
   h1,
-  h2 {
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-heading;
   }
 

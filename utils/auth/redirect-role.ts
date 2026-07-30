@@ -12,7 +12,7 @@ export const redirectRole = async (allowedRoles: UserRole[]) => {
   }
 
   if (!allowedRoles.includes(user.role)) {
-    redirect("/unauthorized");
+    redirect("/");
   }
 
   return user;
