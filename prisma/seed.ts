@@ -5,6 +5,8 @@ import { hash } from "bcryptjs";
 
 import { PrismaClient } from "../app/generated/prisma/client";
 import {
+  ClientStatus,
+  ClientType,
   TemplateCategory,
   TemplateStatus,
   UserRole,
@@ -92,6 +94,152 @@ const seedTemplates = [
   },
 ];
 
+type SeedClient = {
+  name: string;
+  displayName?: string;
+  document: string;
+  type: ClientType;
+  status: ClientStatus;
+  email: string;
+  phone?: string | null;
+  birthDate?: Date;
+  stateRegistration?: string;
+  municipalRegistration?: string;
+  notes?: string;
+  responsibleEmail: string;
+  address?: {
+    postalCode: string;
+    street: string;
+    number: string;
+    complement?: string;
+    district: string;
+    city: string;
+    state: string;
+  } | null;
+};
+
+/**
+ * `document`, `phone` e `postalCode` são gravados com dígitos apenas — a
+ * máscara é responsabilidade da exibição. `responsibleEmail` amarra o
+ * cliente a um dos usuários semeados acima.
+ *
+ * A amostra cobre de propósito os casos que a tela precisa tratar: pessoa
+ * jurídica com e sem nome fantasia, pessoa física com e sem nome social,
+ * cliente sem endereço e cliente sem telefone.
+ */
+const seedClients: SeedClient[] = [
+  {
+    name: "Monteiro Comércio Ltda.",
+    displayName: "Monteiro Store",
+    document: "12345678000190",
+    type: ClientType.PESSOA_JURIDICA,
+    status: ClientStatus.ATIVO,
+    email: "juridico@monteirocomercio.com.br",
+    phone: "11988881212",
+    stateRegistration: "110.042.490.114",
+    municipalRegistration: "1.234.567-8",
+    notes: "Contrato de assessoria mensal renovado em janeiro.",
+    responsibleEmail: "ana.monteiro@monteiro.adv.br",
+    address: {
+      postalCode: "01310100",
+      street: "Avenida Paulista",
+      number: "1000",
+      complement: "conjunto 142",
+      district: "Bela Vista",
+      city: "São Paulo",
+      state: "SP",
+    },
+  },
+  {
+    name: "Luciana Prado de Almeida",
+    displayName: "Luciana Prado",
+    document: "12345678910",
+    type: ClientType.PESSOA_FISICA,
+    status: ClientStatus.ATIVO,
+    email: "luciana.prado@email.com",
+    phone: "11977773030",
+    birthDate: new Date("1986-04-17T00:00:00.000Z"),
+    responsibleEmail: "rafael.costa@monteiro.adv.br",
+    address: {
+      postalCode: "05422030",
+      street: "Rua das Acácias",
+      number: "128",
+      district: "Pinheiros",
+      city: "São Paulo",
+      state: "SP",
+    },
+  },
+  {
+    name: "Grupo Arco S.A.",
+    document: "45123987000122",
+    type: ClientType.PESSOA_JURIDICA,
+    status: ClientStatus.ATIVO,
+    email: "contato@grupoarco.com.br",
+    phone: "1140028922",
+    stateRegistration: "336.118.207.905",
+    responsibleEmail: "lucas.martins@monteiro.adv.br",
+    address: {
+      postalCode: "20031170",
+      street: "Avenida Rio Branco",
+      number: "277",
+      complement: "10º andar",
+      district: "Centro",
+      city: "Rio de Janeiro",
+      state: "RJ",
+    },
+  },
+  {
+    name: "Carlos Henrique Lima",
+    document: "98765432100",
+    type: ClientType.PESSOA_FISICA,
+    status: ClientStatus.PROSPECTO,
+    email: "carlos.lima@email.com",
+    phone: "11966661414",
+    notes: "Indicado por Luciana Prado. Aguarda proposta de honorários.",
+    responsibleEmail: "ana.monteiro@monteiro.adv.br",
+    // Prospecto ainda sem endereço cadastrado.
+    address: null,
+  },
+  {
+    name: "Horizonte Tecnologia Ltda.",
+    displayName: "Horizonte Tech",
+    document: "28456333000144",
+    type: ClientType.PESSOA_JURIDICA,
+    status: ClientStatus.ATIVO,
+    email: "legal@horizontetecnologia.com",
+    phone: "11955559090",
+    municipalRegistration: "9.876.543-2",
+    responsibleEmail: "rafael.costa@monteiro.adv.br",
+    address: {
+      postalCode: "30130010",
+      street: "Avenida Afonso Pena",
+      number: "1500",
+      district: "Centro",
+      city: "Belo Horizonte",
+      state: "MG",
+    },
+  },
+  {
+    name: "Beatriz Almeida Rocha",
+    document: "32165498720",
+    type: ClientType.PESSOA_FISICA,
+    status: ClientStatus.INATIVO,
+    email: "beatriz.rocha@email.com",
+    // Cliente inativa sem telefone, para exercitar o estado ausente.
+    phone: null,
+    birthDate: new Date("1979-11-02T00:00:00.000Z"),
+    responsibleEmail: "lucas.martins@monteiro.adv.br",
+    address: {
+      postalCode: "80020320",
+      street: "Rua Marechal Deodoro",
+      number: "630",
+      district: "Centro",
+      city: "Curitiba",
+      state: "PR",
+    },
+  },
+];
+
 const main = async () => {
   const connectionString = process.env.DATABASE_URL;
 
@@ -168,7 +316,53 @@ const main = async () => {
       console.log(`✓ ${template.name}`);
     }
 
-    console.log(`\n${seedUsers.length} usuários e ${seedTemplates.length} templates disponíveis.`);
+    console.log();
+
+    // Create clients. `document` é único, então serve de chave do upsert.
+    for (const { responsibleEmail, address, ...client } of seedClients) {
+      const responsible = await prisma.user.findUniqueOrThrow({
+        where: { email: responsibleEmail },
+        select: { id: true },
+      });
+
+      const fields = {
+        name: client.name,
+        displayName: client.displayName ?? null,
+        type: client.type,
+        status: client.status,
+        email: client.email,
+        phone: client.phone ?? null,
+        birthDate: client.birthDate ?? null,
+        stateRegistration: client.stateRegistration ?? null,
+        municipalRegistration: client.municipalRegistration ?? null,
+        notes: client.notes ?? null,
+        responsibleId: responsible.id,
+      };
+
+      await prisma.client.upsert({
+        where: { document: client.document },
+        create: {
+          ...fields,
+          document: client.document,
+          ...(address ? { address: { create: address } } : {}),
+        },
+        update: {
+          ...fields,
+          deletedAt: null,
+          // `upsert` aninhado mantém o seed idempotente: reexecutar não
+          // duplica o endereço nem falha na unicidade de `client_id`.
+          ...(address
+            ? { address: { upsert: { create: address, update: address } } }
+            : {}),
+        },
+      });
+
+      console.log(`✓ ${client.name}`);
+    }
+
+    console.log(
+      `\n${seedUsers.length} usuários, ${seedTemplates.length} templates e ${seedClients.length} clientes disponíveis.`,
+    );
 
     if (!process.env.SEED_PASSWORD) {
       console.log(`Senha padrão de desenvolvimento: ${DEFAULT_PASSWORD}`);

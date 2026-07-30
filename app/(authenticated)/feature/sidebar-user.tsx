@@ -20,6 +20,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { getInitials } from "@/utils/get-initials";
 
 import type { SessionUser } from "../types/session-user";
 
@@ -28,14 +29,6 @@ const roleLabels: Record<UserRole, string> = {
   ADVOGADO: "Advogado",
   COLABORADOR: "Colaborador",
 };
-
-const getInitials = (name: string) =>
-  name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
 
 type SidebarUserProps = {
   user: SessionUser;

@@ -4,114 +4,116 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-    provider = "prisma-client"
-    output   = "../app/generated/prisma"
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
 }
 
 datasource db {
-    provider = "postgresql"
+  provider = "postgresql"
 }
 
 enum UserRole {
-    ADMINISTRADOR
-    ADVOGADO
-    COLABORADOR
+  ADMINISTRADOR
+  ADVOGADO
+  COLABORADOR
 }
 
 enum TemplateStatus {
-    RASCUNHO
-    ATIVO
-    INATIVO
+  RASCUNHO
+  ATIVO
+  INATIVO
 }
 
 enum TemplateCategory {
-    CONTRATO
-    PETICAO
-    PROCURACAO
-    NOTIFICACAO
-    FICHA
-    OUTRO
+  CONTRATO
+  PETICAO
+  PROCURACAO
+  NOTIFICACAO
+  FICHA
+  OUTRO
 }
 
 model User {
-    id           String   @id @default(uuid()) @db.Uuid
-    name         String   @db.VarChar(150)
-    email        String   @unique @db.VarChar(254)
-    passwordHash String   @map("password_hash") @db.VarChar(255)
-    role         UserRole @default(COLABORADOR)
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @db.VarChar(150)
+  email        String   @unique @db.VarChar(254)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  role         UserRole @default(COLABORADOR)
 
-    createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-    updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
-    deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-    templatesCreated        Template[]        @relation("TemplateCreatedBy")
-    templatesUpdated        Template[]        @relation("TemplateUpdatedBy")
-    templateVersionsCreated TemplateVersion[] @relation("TemplateVersionCreatedBy")
-    templateDraftsUpdated   TemplateDraft[]   @relation("TemplateDraftUpdatedBy")
+  templatesCreated        Template[]        @relation("TemplateCreatedBy")
+  templatesUpdated        Template[]        @relation("TemplateUpdatedBy")
+  templateVersionsCreated TemplateVersion[] @relation("TemplateVersionCreatedBy")
+  templateDraftsUpdated   TemplateDraft[]   @relation("TemplateDraftUpdatedBy")
 
-    @@index([deletedAt])
-    @@map("users")
+  clientsResponsible Client[] @relation("ClientResponsible")
+
+  @@index([deletedAt])
+  @@map("users")
 }
 
 model Template {
-    id String @id @default(uuid()) @db.Uuid
+  id String @id @default(uuid()) @db.Uuid
 
-    name        String  @db.VarChar(160)
-    description String? @db.VarChar(500)
+  name        String  @db.VarChar(160)
+  description String? @db.VarChar(500)
 
-    category  TemplateCategory
-    legalArea String?          @map("legal_area") @db.VarChar(80)
-    status    TemplateStatus   @default(RASCUNHO)
+  category  TemplateCategory
+  legalArea String?          @map("legal_area") @db.VarChar(80)
+  status    TemplateStatus   @default(RASCUNHO)
 
-    // Zero enquanto nenhuma versão foi publicada. Publicar incrementa.
-    currentVersion Int @default(0) @map("current_version")
+  // Zero enquanto nenhuma versão foi publicada. Publicar incrementa.
+  currentVersion Int @default(0) @map("current_version")
 
-    createdById String @map("created_by_id") @db.Uuid
-    updatedById String @map("updated_by_id") @db.Uuid
+  createdById String @map("created_by_id") @db.Uuid
+  updatedById String @map("updated_by_id") @db.Uuid
 
-    createdBy User @relation("TemplateCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdBy User @relation("TemplateCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
 
-    updatedBy User @relation("TemplateUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  updatedBy User @relation("TemplateUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
 
-    versions TemplateVersion[]
-    draft    TemplateDraft?
+  versions TemplateVersion[]
+  draft    TemplateDraft?
 
-    createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-    updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
-    deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-    @@index([status, deletedAt])
-    @@index([category, deletedAt])
-    @@index([legalArea, deletedAt])
-    @@index([updatedAt])
-    @@map("templates")
+  @@index([status, deletedAt])
+  @@index([category, deletedAt])
+  @@index([legalArea, deletedAt])
+  @@index([updatedAt])
+  @@map("templates")
 }
 
 model TemplateVersion {
-    id String @id @default(uuid()) @db.Uuid
+  id String @id @default(uuid()) @db.Uuid
 
-    templateId String @map("template_id") @db.Uuid
-    version    Int
+  templateId String @map("template_id") @db.Uuid
+  version    Int
 
-    // Fonte de verdade do documento. O HTML é derivado no servidor.
-    contentJson Json   @map("content_json")
-    contentHtml String @map("content_html") @db.Text
+  // Fonte de verdade do documento. O HTML é derivado no servidor.
+  contentJson Json   @map("content_json")
+  contentHtml String @map("content_html") @db.Text
 
-    variables    Json
-    signatures   Json
-    pageSettings Json @map("page_settings")
+  variables    Json
+  signatures   Json
+  pageSettings Json @map("page_settings")
 
-    createdById String @map("created_by_id") @db.Uuid
+  createdById String @map("created_by_id") @db.Uuid
 
-    template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
-    createdBy User @relation("TemplateVersionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdBy User @relation("TemplateVersionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
 
-    createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-    @@unique([templateId, version])
-    @@index([templateId, createdAt])
-    @@map("template_versions")
+  @@unique([templateId, version])
+  @@index([templateId, createdAt])
+  @@map("template_versions")
 }
 
 /// Rascunho mutável de um template. Existe no máximo um por template e é
@@ -119,26 +121,129 @@ model TemplateVersion {
 /// concorrente: o cliente devolve a revisão que carregou e a action recusa
 /// a gravação quando ela já avançou.
 model TemplateDraft {
-    id String @id @default(uuid()) @db.Uuid
+  id String @id @default(uuid()) @db.Uuid
 
-    templateId String @unique @map("template_id") @db.Uuid
-    revision   Int    @default(1)
+  templateId String @unique @map("template_id") @db.Uuid
+  revision   Int    @default(1)
 
-    contentJson Json   @map("content_json")
-    contentHtml String @map("content_html") @db.Text
+  contentJson Json   @map("content_json")
+  contentHtml String @map("content_html") @db.Text
 
-    variables    Json
-    signatures   Json
-    pageSettings Json @map("page_settings")
+  variables    Json
+  signatures   Json
+  pageSettings Json @map("page_settings")
 
-    updatedById String @map("updated_by_id") @db.Uuid
+  updatedById String @map("updated_by_id") @db.Uuid
 
-    template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
-    updatedBy User @relation("TemplateDraftUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  updatedBy User @relation("TemplateDraftUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
 
-    createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-    updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-    @@map("template_drafts")
+  @@map("template_drafts")
+}
+
+enum ClientType {
+  PESSOA_FISICA
+  PESSOA_JURIDICA
+}
+
+enum ClientStatus {
+  ATIVO
+  PROSPECTO
+  INATIVO
+}
+
+model Client {
+  id String @id @default(uuid()) @db.Uuid
+
+  /**
+   * Nome completo para pessoa física.
+   * Razão social para pessoa jurídica.
+   */
+  name String @db.VarChar(160)
+
+  /**
+   * Nome social da pessoa física ou nome fantasia da pessoa jurídica.
+   */
+  displayName String? @map("display_name") @db.VarChar(160)
+
+  type   ClientType
+  status ClientStatus @default(PROSPECTO)
+
+  /**
+   * CPF ou CNPJ contendo somente dígitos.
+   * CPF: 11 caracteres.
+   * CNPJ: 14 caracteres.
+   * O tamanho e a validade devem ser verificados no schema Zod,
+   * pois o Prisma não oferece uma constraint condicional baseada em `type`.
+   */
+  document String @unique @db.VarChar(14)
+
+  /**
+   * Campos específicos de pessoa física.
+   */
+  birthDate DateTime? @map("birth_date") @db.Date
+
+  /**
+   * Campos específicos de pessoa jurídica.
+   */
+  stateRegistration     String? @map("state_registration") @db.VarChar(30)
+  municipalRegistration String? @map("municipal_registration") @db.VarChar(30)
+
+  /**
+   * Contatos principais.
+   * Telefone deve ser salvo somente com dígitos.
+   * O limite de 15 permite números no formato internacional.
+   */
+  email String? @db.VarChar(254)
+  phone String? @db.VarChar(15)
+
+  notes String? @db.Text
+
+  /**
+   * Advogado ou colaborador responsável pelo relacionamento.
+   */
+  responsibleId String @map("responsible_id") @db.Uuid
+
+  responsible User @relation("ClientResponsible", fields: [responsibleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  address ClientAddress?
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@index([status, deletedAt])
+  @@index([type, deletedAt])
+  @@index([responsibleId, deletedAt])
+  @@index([name])
+  @@index([email])
+  @@index([updatedAt])
+  @@map("clients")
+}
+
+model ClientAddress {
+  id String @id @default(uuid()) @db.Uuid
+
+  clientId String @unique @map("client_id") @db.Uuid
+
+  postalCode String? @map("postal_code") @db.VarChar(8)
+  street     String? @db.VarChar(160)
+  number     String? @db.VarChar(30)
+  complement String? @db.VarChar(100)
+  district   String? @db.VarChar(100)
+  city       String? @db.VarChar(100)
+  state      String? @db.Char(2)
+  country    String  @default("BR") @db.Char(2)
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([city, state])
+  @@map("client_addresses")
 }
