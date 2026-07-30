@@ -5,6 +5,9 @@ import { hash } from "bcryptjs";
 
 import { PrismaClient } from "../app/generated/prisma/client";
 import {
+  AttendanceChannel,
+  AttendanceFormStatus,
+  ClientAttendanceActionType,
   ClientStatus,
   ClientType,
   TemplateCategory,
@@ -243,6 +246,106 @@ const seedClients: SeedClient[] = [
   },
 ];
 
+type SeedAttendanceForm = {
+  clientDocument: string;
+  responsibleEmail: string;
+  createdByEmail: string;
+  updatedByEmail: string;
+  finalizedByEmail?: string;
+  status: AttendanceFormStatus;
+  channel?: AttendanceChannel;
+  contactPerson?: string;
+  subject: string;
+  legalArea?: string;
+  clientReport?: string;
+  preliminaryAnalysis?: string;
+  daysAgo: number;
+  actions: ClientAttendanceActionType[];
+};
+
+/**
+ * `clientDocument` amarra a ficha a um cliente semeado acima. Como o
+ * modelo não tem chave natural, a idempotência do upsert usa o par
+ * (clientId, subject) — único dentro desta massa de dados controlada.
+ *
+ * `daysAgo` só existe aqui: em produção `attendanceAt` é sempre definido
+ * pelo servidor no momento da criação, nunca recebido de fora.
+ */
+const seedAttendanceForms: SeedAttendanceForm[] = [
+  {
+    clientDocument: "12345678000195",
+    responsibleEmail: "ana.monteiro@monteiro.adv.br",
+    createdByEmail: "ana.monteiro@monteiro.adv.br",
+    updatedByEmail: "ana.monteiro@monteiro.adv.br",
+    finalizedByEmail: "ana.monteiro@monteiro.adv.br",
+    status: AttendanceFormStatus.FINALIZADA,
+    channel: AttendanceChannel.PRESENCIAL,
+    contactPerson: "Carla Nunes (Financeiro)",
+    subject: "Revisão de contrato de prestação de serviços",
+    legalArea: "Empresarial",
+    clientReport:
+      "Cliente solicitou revisão das cláusulas de reajuste e multa rescisória do contrato vigente com fornecedor.",
+    preliminaryAnalysis:
+      "Cláusula de reajuste sem índice definido. Recomendada renegociação antes da renovação em 90 dias.",
+    daysAgo: 12,
+    actions: [
+      ClientAttendanceActionType.ANALISAR_DOCUMENTOS,
+      ClientAttendanceActionType.ELABORAR_CONTRATO_OU_ADITIVO,
+    ],
+  },
+  {
+    clientDocument: "12345678909",
+    responsibleEmail: "rafael.costa@monteiro.adv.br",
+    createdByEmail: "rafael.costa@monteiro.adv.br",
+    updatedByEmail: "rafael.costa@monteiro.adv.br",
+    status: AttendanceFormStatus.RASCUNHO,
+    channel: AttendanceChannel.VIDEOCHAMADA,
+    subject: "Consulta sobre partilha de bens",
+    legalArea: "Família",
+    clientReport:
+      "Cliente relata processo de separação consensual e dúvidas sobre partilha de imóvel adquirido antes do casamento.",
+    daysAgo: 2,
+    actions: [
+      ClientAttendanceActionType.SOLICITAR_INFORMACOES_COMPLEMENTARES,
+      ClientAttendanceActionType.AGENDAR_RETORNO,
+    ],
+  },
+  {
+    clientDocument: "98765432100",
+    responsibleEmail: "ana.monteiro@monteiro.adv.br",
+    createdByEmail: "ana.monteiro@monteiro.adv.br",
+    updatedByEmail: "ana.monteiro@monteiro.adv.br",
+    status: AttendanceFormStatus.RASCUNHO,
+    channel: AttendanceChannel.TELEFONE,
+    subject: "Primeira consulta - possível ação trabalhista",
+    legalArea: "Trabalhista",
+    clientReport:
+      "Cliente relata demissão sem justa causa com verbas rescisórias pendentes há mais de 60 dias.",
+    preliminaryAnalysis:
+      "Caso com bom potencial. Aguardando documentos para confirmar viabilidade antes da proposta de honorários.",
+    daysAgo: 5,
+    actions: [
+      ClientAttendanceActionType.SOLICITAR_DOCUMENTOS,
+      ClientAttendanceActionType.CONSULTAR_PROCESSO_EXISTENTE,
+      ClientAttendanceActionType.ENVIAR_PROPOSTA_HONORARIOS,
+    ],
+  },
+  {
+    clientDocument: "45123987000170",
+    responsibleEmail: "lucas.martins@monteiro.adv.br",
+    createdByEmail: "lucas.martins@monteiro.adv.br",
+    updatedByEmail: "lucas.martins@monteiro.adv.br",
+    status: AttendanceFormStatus.CANCELADA,
+    channel: AttendanceChannel.EMAIL,
+    subject: "Due diligence societária preliminar",
+    legalArea: "Empresarial",
+    clientReport:
+      "Cliente avaliava aquisição de participação societária em concorrente, mas desistiu da operação.",
+    daysAgo: 20,
+    actions: [ClientAttendanceActionType.ENCERRAR_SEM_PROVIDENCIAS],
+  },
+];
+
 const main = async () => {
   const connectionString = process.env.DATABASE_URL;
 
@@ -363,8 +466,134 @@ const main = async () => {
       console.log(`✓ ${client.name}`);
     }
 
+    console.log();
+
+    // Create attendance forms (fichas). Sem chave natural no modelo, a
+    // idempotência usa o par (clientId, subject).
+    for (const form of seedAttendanceForms) {
+      const client = await prisma.client.findUniqueOrThrow({
+        where: { document: form.clientDocument },
+        select: {
+          id: true,
+          name: true,
+          displayName: true,
+          document: true,
+          type: true,
+          email: true,
+          phone: true,
+          address: {
+            select: {
+              postalCode: true,
+              street: true,
+              number: true,
+              complement: true,
+              district: true,
+              city: true,
+              state: true,
+            },
+          },
+        },
+      });
+
+      const [responsible, createdBy, updatedBy, finalizedBy] =
+        await Promise.all([
+          prisma.user.findUniqueOrThrow({
+            where: { email: form.responsibleEmail },
+            select: { id: true },
+          }),
+          prisma.user.findUniqueOrThrow({
+            where: { email: form.createdByEmail },
+            select: { id: true },
+          }),
+          prisma.user.findUniqueOrThrow({
+            where: { email: form.updatedByEmail },
+            select: { id: true },
+          }),
+          form.finalizedByEmail
+            ? prisma.user.findUniqueOrThrow({
+                where: { email: form.finalizedByEmail },
+                select: { id: true },
+              })
+            : null,
+        ]);
+
+      const attendanceAt = new Date(
+        Date.now() - form.daysAgo * 24 * 60 * 60 * 1000,
+      );
+
+      // Snapshot imutável do cadastro no momento da ficha, conforme o
+      // comentário do modelo: nome, documento, tipo, contatos e endereço.
+      const clientSnapshot = {
+        name: client.name,
+        displayName: client.displayName,
+        document: client.document,
+        type: client.type,
+        email: client.email,
+        phone: client.phone,
+        address: client.address,
+      };
+
+      const fields = {
+        status: form.status,
+        channel: form.channel ?? null,
+        contactPerson: form.contactPerson ?? null,
+        subject: form.subject,
+        legalArea: form.legalArea ?? null,
+        clientReport: form.clientReport ?? null,
+        preliminaryAnalysis: form.preliminaryAnalysis ?? null,
+        responsibleId: responsible.id,
+        updatedById: updatedBy.id,
+        finalizedById: finalizedBy?.id ?? null,
+        finalizedAt: finalizedBy ? attendanceAt : null,
+      };
+
+      const existing = await prisma.clientAttendanceForm.findFirst({
+        where: { clientId: client.id, subject: form.subject },
+        select: { id: true },
+      });
+
+      if (existing) {
+        await prisma.clientAttendanceAction.deleteMany({
+          where: { attendanceFormId: existing.id },
+        });
+
+        await prisma.clientAttendanceForm.update({
+          where: { id: existing.id },
+          data: {
+            ...fields,
+            deletedAt: null,
+            clientSnapshot,
+            actions: {
+              create: form.actions.map((type, position) => ({
+                type,
+                position,
+              })),
+            },
+          },
+        });
+      } else {
+        await prisma.clientAttendanceForm.create({
+          data: {
+            ...fields,
+            clientId: client.id,
+            createdById: createdBy.id,
+            clientSnapshot,
+            attendanceAt,
+            actions: {
+              create: form.actions.map((type, position) => ({
+                type,
+                position,
+              })),
+            },
+          },
+        });
+      }
+
+      console.log(`✓ ${form.subject}`);
+    }
+
     console.log(
-      `\n${seedUsers.length} usuários, ${seedTemplates.length} templates e ${seedClients.length} clientes disponíveis.`,
+      `\n${seedUsers.length} usuários, ${seedTemplates.length} templates, ${seedClients.length} clientes e ${seedAttendanceForms.length} fichas disponíveis.`,
     );
 
     if (!process.env.SEED_PASSWORD) {

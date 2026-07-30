@@ -51,6 +51,11 @@ model User {
 
   clientsResponsible Client[] @relation("ClientResponsible")
 
+  attendanceFormsResponsible ClientAttendanceForm[] @relation("ClientAttendanceFormResponsible")
+  attendanceFormsCreated     ClientAttendanceForm[] @relation("ClientAttendanceFormCreatedBy")
+  attendanceFormsUpdated     ClientAttendanceForm[] @relation("ClientAttendanceFormUpdatedBy")
+  attendanceFormsFinalized   ClientAttendanceForm[] @relation("ClientAttendanceFormFinalizedBy")
+
   @@index([deletedAt])
   @@map("users")
 }
@@ -212,6 +217,8 @@ model Client {
 
   address ClientAddress?
 
+  attendanceForms ClientAttendanceForm[] @relation("ClientAttendanceForms")
+
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
@@ -246,4 +253,128 @@ model ClientAddress {
 
   @@index([city, state])
   @@map("client_addresses")
+}
+
+enum AttendanceFormStatus {
+  RASCUNHO
+  FINALIZADA
+  CANCELADA
+}
+
+enum AttendanceChannel {
+  PRESENCIAL
+  TELEFONE
+  VIDEOCHAMADA
+  EMAIL
+  WHATSAPP
+  OUTRO
+}
+
+enum ClientAttendanceActionType {
+  SOLICITAR_DOCUMENTOS
+  ANALISAR_DOCUMENTOS
+  SOLICITAR_INFORMACOES_COMPLEMENTARES
+  CONSULTAR_PROCESSO_EXISTENTE
+
+  REALIZAR_PESQUISA_JURIDICA
+  ELABORAR_PARECER
+  ELABORAR_CONTRATO_OU_ADITIVO
+  ELABORAR_NOTIFICACAO_EXTRAJUDICIAL
+
+  ELABORAR_PETICAO
+  PROPOR_ACAO_JUDICIAL
+  APRESENTAR_DEFESA
+  ABRIR_PROCESSO_INTERNO
+
+  AGENDAR_RETORNO
+  ENVIAR_PROPOSTA_HONORARIOS
+  ENCAMINHAR_OUTRA_AREA
+  ENCERRAR_SEM_PROVIDENCIAS
+}
+
+model ClientAttendanceForm {
+  id String @id @default(uuid()) @db.Uuid
+
+  clientId String @map("client_id") @db.Uuid
+
+  client Client @relation("ClientAttendanceForms", fields: [clientId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  /// Snapshot imutável dos dados cadastrais existentes no momento da
+  /// criação da ficha. Deve conter nome, documento, tipo, contatos e
+  /// endereço. O layout continua exibindo o cadastro atual do cliente.
+  clientSnapshot Json @map("client_snapshot")
+
+  clientSnapshotVersion Int @default(1) @map("client_snapshot_version")
+
+  status   AttendanceFormStatus @default(RASCUNHO)
+  revision Int                  @default(1)
+
+  /// Definido automaticamente pelo servidor ao criar a ficha.
+  /// Não deve ser recebido como campo editável do formulário.
+  attendanceAt DateTime @default(now()) @map("attendance_at") @db.Timestamptz(3)
+
+  channel       AttendanceChannel?
+  contactPerson String?            @map("contact_person") @db.VarChar(160)
+
+  subject   String? @db.VarChar(180)
+  legalArea String? @map("legal_area") @db.VarChar(80)
+
+  /// Relato apresentado pelo cliente.
+  clientReport String? @map("client_report") @db.Text
+
+  /// Avaliação inicial realizada pelo advogado responsável.
+  preliminaryAnalysis String? @map("preliminary_analysis") @db.Text
+
+  /// O responsável é obtido da sessão autenticada no momento da criação.
+  /// Não deve ser selecionável no formulário.
+  responsibleId String @map("responsible_id") @db.Uuid
+
+  responsible User @relation("ClientAttendanceFormResponsible", fields: [responsibleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  createdById String @map("created_by_id") @db.Uuid
+  updatedById String @map("updated_by_id") @db.Uuid
+
+  createdBy User @relation("ClientAttendanceFormCreatedBy", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  updatedBy User @relation("ClientAttendanceFormUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  finalizedById String? @map("finalized_by_id") @db.Uuid
+
+  finalizedBy User? @relation("ClientAttendanceFormFinalizedBy", fields: [finalizedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  finalizedAt DateTime? @map("finalized_at") @db.Timestamptz(3)
+
+  actions ClientAttendanceAction[]
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@index([clientId, deletedAt])
+  @@index([responsibleId, deletedAt])
+  @@index([status, deletedAt])
+  @@index([attendanceAt])
+  @@index([legalArea])
+  @@index([updatedAt])
+  @@map("client_attendance_forms")
+}
+
+/// Cada linha representa um checkbox selecionado na seção de
+/// ações e encaminhamentos. A ausência da linha representa opção
+/// não selecionada.
+model ClientAttendanceAction {
+  id String @id @default(uuid()) @db.Uuid
+
+  attendanceFormId String                     @map("attendance_form_id") @db.Uuid
+  type             ClientAttendanceActionType
+  position         Int                        @default(0)
+
+  attendanceForm ClientAttendanceForm @relation(fields: [attendanceFormId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([attendanceFormId, type])
+  @@index([attendanceFormId, position])
+  @@index([type])
+  @@map("client_attendance_actions")
 }
