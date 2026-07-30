@@ -8,6 +8,7 @@ export const templateCategoryLabels: Record<TemplateCategory, string> = {
   PETICAO: "Petição",
   PROCURACAO: "Procuração",
   NOTIFICACAO: "Notificação",
+  FICHA: "Ficha",
   OUTRO: "Outro",
 };
 

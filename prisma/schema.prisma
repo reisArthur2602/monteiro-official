@@ -29,6 +29,7 @@ enum TemplateCategory {
     PETICAO
     PROCURACAO
     NOTIFICACAO
+    FICHA
     OUTRO
 }
 
@@ -46,6 +47,7 @@ model User {
     templatesCreated        Template[]        @relation("TemplateCreatedBy")
     templatesUpdated        Template[]        @relation("TemplateUpdatedBy")
     templateVersionsCreated TemplateVersion[] @relation("TemplateVersionCreatedBy")
+    templateDraftsUpdated   TemplateDraft[]   @relation("TemplateDraftUpdatedBy")
 
     @@index([deletedAt])
     @@map("users")
@@ -61,7 +63,8 @@ model Template {
     legalArea String?          @map("legal_area") @db.VarChar(80)
     status    TemplateStatus   @default(RASCUNHO)
 
-    currentVersion Int @default(1) @map("current_version")
+    // Zero enquanto nenhuma versão foi publicada. Publicar incrementa.
+    currentVersion Int @default(0) @map("current_version")
 
     createdById String @map("created_by_id") @db.Uuid
     updatedById String @map("updated_by_id") @db.Uuid
@@ -71,6 +74,7 @@ model Template {
     updatedBy User @relation("TemplateUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
 
     versions TemplateVersion[]
+    draft    TemplateDraft?
 
     createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
     updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -89,6 +93,8 @@ model TemplateVersion {
     templateId String @map("template_id") @db.Uuid
     version    Int
 
+    // Fonte de verdade do documento. O HTML é derivado no servidor.
+    contentJson Json   @map("content_json")
     contentHtml String @map("content_html") @db.Text
 
     variables    Json
@@ -106,4 +112,33 @@ model TemplateVersion {
     @@unique([templateId, version])
     @@index([templateId, createdAt])
     @@map("template_versions")
+}
+
+/// Rascunho mutável de um template. Existe no máximo um por template e é
+/// sobrescrito pelo autosave. `revision` serve para detectar edição
+/// concorrente: o cliente devolve a revisão que carregou e a action recusa
+/// a gravação quando ela já avançou.
+model TemplateDraft {
+    id String @id @default(uuid()) @db.Uuid
+
+    templateId String @unique @map("template_id") @db.Uuid
+    revision   Int    @default(1)
+
+    contentJson Json   @map("content_json")
+    contentHtml String @map("content_html") @db.Text
+
+    variables    Json
+    signatures   Json
+    pageSettings Json @map("page_settings")
+
+    updatedById String @map("updated_by_id") @db.Uuid
+
+    template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+    updatedBy User @relation("TemplateDraftUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+
+    createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+    updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+    @@map("template_drafts")
 }

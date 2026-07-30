@@ -1,4 +1,4 @@
-import { FileUp, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -42,21 +42,12 @@ const TemplatesPage = async ({ searchParams }: TemplatesPageProps) => {
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline">
-            <Link href="/templates/importar">
-              <FileUp aria-hidden="true" />
-              Importar DOCX
-            </Link>
-          </Button>
-
-          <Button asChild>
-            <Link href="/templates/novo">
-              <Plus aria-hidden="true" />
-              Novo template
-            </Link>
-          </Button>
-        </div>
+        <Button asChild>
+          <Link href="/templates/upsert">
+            <Plus aria-hidden="true" />
+            Novo template
+          </Link>
+        </Button>
       </header>
 
       <TemplatesSummary />

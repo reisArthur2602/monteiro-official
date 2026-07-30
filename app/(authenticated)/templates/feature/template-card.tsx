@@ -63,7 +63,7 @@ export const TemplateCard = ({ template }: TemplateCardProps) => {
         <div className="grid gap-1.5">
           <h2 className="font-heading text-lg leading-snug font-semibold tracking-tight">
             <Link
-              href={`/templates/${template.id}`}
+              href={`/templates/upsert?templateId=${template.id}`}
               className="outline-none after:absolute after:inset-0 hover:text-primary"
             >
               {template.name}
@@ -89,7 +89,9 @@ export const TemplateCard = ({ template }: TemplateCardProps) => {
         <span>Atualizado {formatUpdatedAt(template.updatedAt)}</span>
 
         <span className="font-mono font-medium">
-          v{template.currentVersion}
+          {template.currentVersion > 0
+            ? `v${template.currentVersion}`
+            : "sem versão"}
         </span>
       </footer>
     </article>
