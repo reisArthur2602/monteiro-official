@@ -1,9 +1,13 @@
+import Link from "next/link";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { getInitials } from "@/utils/get-initials";
 
+import { buildClientUpsertHref } from "../utils/build-clients-href";
 import { formatDocument } from "../utils/format-document";
 
 type ClientIdentityProps = {
+  clientId: string;
   name: string;
   displayName: string | null;
   document: string;
@@ -19,6 +23,7 @@ type ClientIdentityProps = {
  * nome de registro são o que aparece em contrato e petição.
  */
 export const ClientIdentity = ({
+  clientId,
   name,
   displayName,
   document,
@@ -31,7 +36,12 @@ export const ClientIdentity = ({
     </Avatar>
 
     <div className="min-w-0">
-      <p className="truncate font-semibold">{displayName ?? name}</p>
+      <Link
+        href={buildClientUpsertHref(clientId)}
+        className="block truncate font-semibold outline-none hover:text-primary focus-visible:underline focus-visible:underline-offset-4"
+      >
+        {displayName ?? name}
+      </Link>
 
       {displayName ? (
         <p className="truncate text-xs text-muted-foreground">{name}</p>

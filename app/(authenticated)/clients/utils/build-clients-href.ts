@@ -1,6 +1,11 @@
 import type { ListClientsParams } from "../schemas/list-clients-params-schema";
 
 export const CLIENTS_PATH = "/clients";
+export const CLIENT_UPSERT_PATH = "/clients/upsert";
+
+/** Rota de criação, ou de edição quando recebe um id. */
+export const buildClientUpsertHref = (clientId?: string) =>
+  clientId ? `${CLIENT_UPSERT_PATH}?clientId=${clientId}` : CLIENT_UPSERT_PATH;
 
 /**
  * Monta a URL da listagem preservando apenas os filtros ativos.

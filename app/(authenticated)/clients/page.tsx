@@ -1,5 +1,9 @@
+import { Plus } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
+
+import { Button } from "@/components/ui/button";
 
 import { ClientsFilters } from "./feature/clients-filters";
 import { ClientsResults } from "./feature/clients-results";
@@ -8,6 +12,7 @@ import { ClientsSummary } from "./feature/clients-summary";
 import { listClientResponsibles } from "./queries/list-client-responsibles";
 import { listClientStates } from "./queries/list-client-states";
 import { listClientsParamsSchema } from "./schemas/list-clients-params-schema";
+import { buildClientUpsertHref } from "./utils/build-clients-href";
 
 export const metadata: Metadata = {
   title: "Clientes",
@@ -28,18 +33,27 @@ const ClientsPage = async ({ searchParams }: ClientsPageProps) => {
 
   return (
     <div className="grid gap-6">
-      <header className="grid max-w-3xl gap-2">
-        <span className="font-mono text-xs font-semibold tracking-wider text-primary uppercase">
-          Relacionamento
-        </span>
+      <header className="flex flex-wrap items-end justify-between gap-6">
+        <div className="grid max-w-3xl gap-2">
+          <span className="font-mono text-xs font-semibold tracking-wider text-primary uppercase">
+            Relacionamento
+          </span>
 
-        <h1 className="font-heading text-4xl font-semibold tracking-tight">
-          Clientes
-        </h1>
+          <h1 className="font-heading text-4xl font-semibold tracking-tight">
+            Clientes
+          </h1>
 
-        <p className="text-muted-foreground">
-          Consulte pessoas físicas e jurídicas vinculadas ao escritório.
-        </p>
+          <p className="text-muted-foreground">
+            Consulte pessoas físicas e jurídicas vinculadas ao escritório.
+          </p>
+        </div>
+
+        <Button asChild>
+          <Link href={buildClientUpsertHref()}>
+            <Plus aria-hidden="true" />
+            Novo cliente
+          </Link>
+        </Button>
       </header>
 
       <ClientsSummary />

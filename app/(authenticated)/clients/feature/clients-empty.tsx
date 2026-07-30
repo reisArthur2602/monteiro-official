@@ -11,7 +11,10 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 
-import { CLIENTS_PATH } from "../utils/build-clients-href";
+import {
+  buildClientUpsertHref,
+  CLIENTS_PATH,
+} from "../utils/build-clients-href";
 
 type ClientsEmptyProps = {
   hasFilters: boolean;
@@ -35,12 +38,16 @@ export const ClientsEmpty = ({ hasFilters }: ClientsEmptyProps) => (
       </EmptyDescription>
     </EmptyHeader>
 
-    {hasFilters ? (
-      <EmptyContent>
+    <EmptyContent>
+      {hasFilters ? (
         <Button asChild variant="outline">
           <Link href={CLIENTS_PATH}>Limpar filtros</Link>
         </Button>
-      </EmptyContent>
-    ) : null}
+      ) : (
+        <Button asChild>
+          <Link href={buildClientUpsertHref()}>Cadastrar cliente</Link>
+        </Button>
+      )}
+    </EmptyContent>
   </Empty>
 );

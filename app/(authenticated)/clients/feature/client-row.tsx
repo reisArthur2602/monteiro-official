@@ -19,6 +19,7 @@ export const ClientRow = ({ client }: ClientRowProps) => {
     <TableRow>
       <TableCell>
         <ClientIdentity
+          clientId={client.id}
           name={client.name}
           displayName={client.displayName}
           document={client.document}

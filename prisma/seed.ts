@@ -126,12 +126,15 @@ type SeedClient = {
  * A amostra cobre de propósito os casos que a tela precisa tratar: pessoa
  * jurídica com e sem nome fantasia, pessoa física com e sem nome social,
  * cliente sem endereço e cliente sem telefone.
+ *
+ * Todos os CPF/CNPJ passam pelos dígitos verificadores — o formulário os
+ * valida de verdade, então documentos decorativos travariam a edição.
  */
 const seedClients: SeedClient[] = [
   {
     name: "Monteiro Comércio Ltda.",
     displayName: "Monteiro Store",
-    document: "12345678000190",
+    document: "12345678000195",
     type: ClientType.PESSOA_JURIDICA,
     status: ClientStatus.ATIVO,
     email: "juridico@monteirocomercio.com.br",
@@ -153,7 +156,7 @@ const seedClients: SeedClient[] = [
   {
     name: "Luciana Prado de Almeida",
     displayName: "Luciana Prado",
-    document: "12345678910",
+    document: "12345678909",
     type: ClientType.PESSOA_FISICA,
     status: ClientStatus.ATIVO,
     email: "luciana.prado@email.com",
@@ -171,7 +174,7 @@ const seedClients: SeedClient[] = [
   },
   {
     name: "Grupo Arco S.A.",
-    document: "45123987000122",
+    document: "45123987000170",
     type: ClientType.PESSOA_JURIDICA,
     status: ClientStatus.ATIVO,
     email: "contato@grupoarco.com.br",
@@ -203,7 +206,7 @@ const seedClients: SeedClient[] = [
   {
     name: "Horizonte Tecnologia Ltda.",
     displayName: "Horizonte Tech",
-    document: "28456333000144",
+    document: "28456333000149",
     type: ClientType.PESSOA_JURIDICA,
     status: ClientStatus.ATIVO,
     email: "legal@horizontetecnologia.com",
@@ -221,7 +224,7 @@ const seedClients: SeedClient[] = [
   },
   {
     name: "Beatriz Almeida Rocha",
-    document: "32165498720",
+    document: "32165498791",
     type: ClientType.PESSOA_FISICA,
     status: ClientStatus.INATIVO,
     email: "beatriz.rocha@email.com",

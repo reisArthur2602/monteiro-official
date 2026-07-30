@@ -30,6 +30,7 @@ export const ClientCard = ({ client }: ClientCardProps) => (
   <article className="grid gap-3.5 rounded-xl border bg-card p-4">
     <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
       <ClientIdentity
+        clientId={client.id}
         name={client.name}
         displayName={client.displayName}
         document={client.document}
