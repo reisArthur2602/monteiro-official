@@ -56,9 +56,8 @@ model User {
   attendanceFormsUpdated     ClientAttendanceForm[] @relation("ClientAttendanceFormUpdatedBy")
   attendanceFormsFinalized   ClientAttendanceForm[] @relation("ClientAttendanceFormFinalizedBy")
 
-
-clientDocumentsUploaded ClientDocument[] @relation("ClientDocumentUploadedBy")
-clientDocumentsUpdated  ClientDocument[] @relation("ClientDocumentUpdatedBy")
+  clientDocumentsUploaded ClientDocument[] @relation("ClientDocumentUploadedBy")
+  clientDocumentsUpdated  ClientDocument[] @relation("ClientDocumentUpdatedBy")
 
   @@index([deletedAt])
   @@map("users")
@@ -298,7 +297,7 @@ model ClientDocument {
 
   clientId String @map("client_id") @db.Uuid
 
-  client Client @relation("ClientDocuments",fields: [clientId],references: [id],onDelete: Restrict,onUpdate: Cascade)
+  client Client @relation("ClientDocuments", fields: [clientId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   title       String  @db.VarChar(200)
   description String? @db.VarChar(500)
@@ -327,9 +326,9 @@ model ClientDocument {
   uploadedById String @map("uploaded_by_id") @db.Uuid
   updatedById  String @map("updated_by_id") @db.Uuid
 
-  uploadedBy User @relation("ClientDocumentUploadedBy",fields: [uploadedById],references: [id],onDelete: Restrict,onUpdate: Cascade)
+  uploadedBy User @relation("ClientDocumentUploadedBy", fields: [uploadedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-  updatedBy User @relation("ClientDocumentUpdatedBy",fields: [updatedById],references: [id],onDelete: Restrict,onUpdate: Cascade)
+  updatedBy User @relation("ClientDocumentUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
 

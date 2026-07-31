@@ -9,18 +9,24 @@ import {
   buildClientHref,
   buildClientIntakesHref,
 } from "../../utils/build-clients-href";
+import { buildClientDocsHref } from "../docs/utils/build-docs-href";
 
 type ClientTabsProps = {
   clientId: string;
   intakesCount: number;
+  documentsCount: number;
 };
 
 /**
  * Abas do cliente. Só entram aqui seções com dado real por trás — nada de
- * Processos, Documentos, Atendimentos ou Agenda enquanto esses modelos não
- * existirem, para não linkar para lugar nenhum.
+ * Processos, Atendimentos ou Agenda enquanto esses modelos não existirem,
+ * para não linkar para lugar nenhum.
  */
-export const ClientTabs = ({ clientId, intakesCount }: ClientTabsProps) => {
+export const ClientTabs = ({
+  clientId,
+  intakesCount,
+  documentsCount,
+}: ClientTabsProps) => {
   const pathname = usePathname();
 
   const tabs = [
@@ -29,6 +35,11 @@ export const ClientTabs = ({ clientId, intakesCount }: ClientTabsProps) => {
       label: "Fichas",
       href: buildClientIntakesHref(clientId),
       count: intakesCount,
+    },
+    {
+      label: "Documentos",
+      href: buildClientDocsHref(clientId),
+      count: documentsCount,
     },
   ];
 

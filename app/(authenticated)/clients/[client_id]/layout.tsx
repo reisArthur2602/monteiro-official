@@ -3,6 +3,7 @@ import type { PropsWithChildren } from "react";
 
 import { redirectAuth } from "@/utils/auth";
 
+import { summarizeClientDocuments } from "./docs/queries/summarize-client-documents";
 import { ClientContextHeader } from "./feature/client-context-header";
 import { ClientTabs } from "./feature/client-tabs";
 import { summarizeClientAttendanceForms } from "./intakes/queries/summarize-client-attendance-forms";
@@ -31,15 +32,21 @@ const ClientLayout = async ({ children, params }: ClientLayoutProps) => {
     notFound();
   }
 
-  const { total: intakesCount } = await summarizeClientAttendanceForms(
-    client.id,
-  );
+  const [{ total: intakesCount }, { total: documentsCount }] =
+    await Promise.all([
+      summarizeClientAttendanceForms(client.id),
+      summarizeClientDocuments(client.id),
+    ]);
 
   return (
     <div className="grid gap-5">
       <ClientContextHeader client={client} />
 
-      <ClientTabs clientId={client.id} intakesCount={intakesCount} />
+      <ClientTabs
+        clientId={client.id}
+        intakesCount={intakesCount}
+        documentsCount={documentsCount}
+      />
 
       {children}
     </div>
