@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormContext, useWatch } from "react-hook-form";
-
+import { FormPanel } from "@/components/shared/form-panel";
 import {
   Field,
   FieldDescription,
@@ -9,12 +9,10 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
-
 import {
   type ClientFormInput,
   NOTES_MAX_LENGTH,
 } from "../schemas/client-form-schema";
-import { ClientPanel } from "./client-panel";
 
 export const ClientNotesPanel = () => {
   const {
@@ -27,7 +25,7 @@ export const ClientNotesPanel = () => {
   const notes = useWatch({ control, name: "notes" }) ?? "";
 
   return (
-    <ClientPanel
+    <FormPanel
       title="Observações internas"
       description="Informações visíveis somente para a equipe do escritório."
     >
@@ -49,6 +47,6 @@ export const ClientNotesPanel = () => {
 
         {errors.notes ? <FieldError>{errors.notes.message}</FieldError> : null}
       </Field>
-    </ClientPanel>
+    </FormPanel>
   );
 };

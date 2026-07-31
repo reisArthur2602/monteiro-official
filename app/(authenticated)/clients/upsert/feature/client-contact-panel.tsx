@@ -1,7 +1,7 @@
 "use client";
 
 import { Controller, useFormContext } from "react-hook-form";
-
+import { FormPanel } from "@/components/shared/form-panel";
 import {
   Field,
   FieldDescription,
@@ -16,11 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
 import type { AssignableUser } from "../queries/list-assignable-users";
 import type { ClientFormInput } from "../schemas/client-form-schema";
 import { maskPhone, PHONE_MAX_DIGITS } from "../utils/input-masks";
-import { ClientPanel } from "./client-panel";
 import { MaskedInput } from "./masked-input";
 
 type ClientContactPanelProps = {
@@ -35,7 +33,7 @@ export const ClientContactPanel = ({ users }: ClientContactPanelProps) => {
   } = useFormContext<ClientFormInput>();
 
   return (
-    <ClientPanel
+    <FormPanel
       title="Contato e responsabilidade"
       description="Dados principais para comunicação e atendimento."
     >
@@ -125,6 +123,6 @@ export const ClientContactPanel = ({ users }: ClientContactPanelProps) => {
           ) : null}
         </Field>
       </div>
-    </ClientPanel>
+    </FormPanel>
   );
 };

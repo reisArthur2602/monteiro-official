@@ -27,6 +27,11 @@ const ClientLoading = () => (
       </div>
     </div>
 
+    <div className="flex gap-4 border-b pb-3">
+      <Skeleton className="h-5 w-24" />
+      <Skeleton className="h-5 w-20" />
+    </div>
+
     <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="rounded-xl border bg-card">
         <div className="min-h-14 border-b px-4 py-3">

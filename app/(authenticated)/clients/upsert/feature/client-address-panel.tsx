@@ -1,7 +1,7 @@
 "use client";
 
 import { Controller, useFormContext } from "react-hook-form";
-
+import { FormPanel } from "@/components/shared/form-panel";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,11 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
 import { brazilianStates } from "../data/brazilian-states";
 import type { ClientFormInput } from "../schemas/client-form-schema";
 import { maskPostalCode, POSTAL_CODE_LENGTH } from "../utils/input-masks";
-import { ClientPanel } from "./client-panel";
 import { MaskedInput } from "./masked-input";
 
 export const ClientAddressPanel = () => {
@@ -28,7 +26,7 @@ export const ClientAddressPanel = () => {
   const addressErrors = errors.address;
 
   return (
-    <ClientPanel
+    <FormPanel
       title="Endereço"
       description="Endereço principal usado nos documentos e comunicações."
     >
@@ -181,6 +179,6 @@ export const ClientAddressPanel = () => {
           />
         </Field>
       </div>
-    </ClientPanel>
+    </FormPanel>
   );
 };

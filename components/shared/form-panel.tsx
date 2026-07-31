@@ -1,16 +1,12 @@
 import type { PropsWithChildren } from "react";
 
-type ClientPanelProps = PropsWithChildren<{
+type FormPanelProps = PropsWithChildren<{
   title: string;
   description: string;
 }>;
 
-/** Seção do formulário: cabeçalho descritivo e uma grade de campos. */
-export const ClientPanel = ({
-  title,
-  description,
-  children,
-}: ClientPanelProps) => (
+/** Seção de formulário: cabeçalho descritivo e um corpo com os campos. */
+export const FormPanel = ({ title, description, children }: FormPanelProps) => (
   <section className="overflow-hidden rounded-xl border bg-card">
     <header className="flex min-h-14 items-center border-b px-4 py-3">
       <div>

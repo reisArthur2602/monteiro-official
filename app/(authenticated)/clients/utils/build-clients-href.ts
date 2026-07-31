@@ -7,9 +7,13 @@ export const CLIENT_UPSERT_PATH = "/clients/upsert";
 export const buildClientUpsertHref = (clientId?: string) =>
   clientId ? `${CLIENT_UPSERT_PATH}?clientId=${clientId}` : CLIENT_UPSERT_PATH;
 
-/** Rota de contexto do cliente — visão geral e, futuramente, suas abas. */
+/** Rota de contexto do cliente — visão geral e suas abas. */
 export const buildClientHref = (clientId: string) =>
   `${CLIENTS_PATH}/${clientId}`;
+
+/** Rota das fichas de atendimento do cliente. */
+export const buildClientIntakesHref = (clientId: string) =>
+  `${buildClientHref(clientId)}/intakes`;
 
 /**
  * Monta a URL da listagem preservando apenas os filtros ativos.

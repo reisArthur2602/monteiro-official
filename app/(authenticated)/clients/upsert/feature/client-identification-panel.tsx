@@ -3,6 +3,7 @@
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 
 import { ClientStatus, ClientType } from "@/app/generated/prisma/enums";
+import { FormPanel } from "@/components/shared/form-panel";
 import {
   Field,
   FieldDescription,
@@ -19,14 +20,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-
 import {
   clientStatusLabels,
   clientTypeLabels,
 } from "../../utils/client-labels";
 import type { ClientFormInput } from "../schemas/client-form-schema";
 import { documentMaxDigits, maskDocument } from "../utils/input-masks";
-import { ClientPanel } from "./client-panel";
 import { MaskedInput } from "./masked-input";
 
 export const ClientIdentificationPanel = () => {
@@ -42,7 +41,7 @@ export const ClientIdentificationPanel = () => {
   const isNaturalPerson = type === ClientType.PESSOA_FISICA;
 
   return (
-    <ClientPanel
+    <FormPanel
       title="Identificação"
       description="Tipo, nome e documento principal do cliente."
     >
@@ -234,6 +233,6 @@ export const ClientIdentificationPanel = () => {
           />
         </Field>
       </div>
-    </ClientPanel>
+    </FormPanel>
   );
 };
