@@ -56,6 +56,10 @@ model User {
   attendanceFormsUpdated     ClientAttendanceForm[] @relation("ClientAttendanceFormUpdatedBy")
   attendanceFormsFinalized   ClientAttendanceForm[] @relation("ClientAttendanceFormFinalizedBy")
 
+
+clientDocumentsUploaded ClientDocument[] @relation("ClientDocumentUploadedBy")
+clientDocumentsUpdated  ClientDocument[] @relation("ClientDocumentUpdatedBy")
+
   @@index([deletedAt])
   @@map("users")
 }
@@ -218,6 +222,7 @@ model Client {
   address ClientAddress?
 
   attendanceForms ClientAttendanceForm[] @relation("ClientAttendanceForms")
+  documents       ClientDocument[]       @relation("ClientDocuments")
 
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -253,6 +258,94 @@ model ClientAddress {
 
   @@index([city, state])
   @@map("client_addresses")
+}
+
+enum ClientDocumentCategory {
+  IDENTIFICACAO
+  CONTRATO
+  PROCURACAO
+  COMPROVANTE
+  CORRESPONDENCIA
+  DOCUMENTO_JURIDICO
+  DOCUMENTO_FINANCEIRO
+  OUTRO
+}
+
+enum ClientDocumentStatus {
+  ATIVO
+  ARQUIVADO
+}
+
+enum ClientDocumentSource {
+  UPLOAD
+  TEMPLATE
+  IMPORTACAO
+}
+
+enum ClientDocumentVisibility {
+  EQUIPE
+  CLIENTE
+  CONFIDENCIAL
+}
+
+/// Documento armazenado no arquivo geral do cliente.
+///
+/// O arquivo físico deve permanecer em um storage externo. Este modelo
+/// guarda os metadados necessários para busca, controle de acesso,
+/// auditoria e recuperação do arquivo.
+model ClientDocument {
+  id String @id @default(uuid()) @db.Uuid
+
+  clientId String @map("client_id") @db.Uuid
+
+  client Client @relation("ClientDocuments",fields: [clientId],references: [id],onDelete: Restrict,onUpdate: Cascade)
+
+  title       String  @db.VarChar(200)
+  description String? @db.VarChar(500)
+
+  category   ClientDocumentCategory
+  status     ClientDocumentStatus     @default(ATIVO)
+  source     ClientDocumentSource     @default(UPLOAD)
+  visibility ClientDocumentVisibility @default(EQUIPE)
+
+  /// Data indicada no próprio documento. É diferente da data de upload.
+  documentDate DateTime? @map("document_date") @db.Date
+
+  /// Chave única do arquivo no storage.
+  storageKey String @unique @map("storage_key") @db.VarChar(500)
+
+  originalName String @map("original_name") @db.VarChar(255)
+  mimeType     String @map("mime_type") @db.VarChar(120)
+  sizeBytes    BigInt @map("size_bytes")
+
+  /// Hash SHA-256 opcional para verificação de integridade e duplicidade.
+  checksum String? @db.VarChar(64)
+
+  /// Tags livres usadas na busca e organização do arquivo.
+  tags String[] @default([])
+
+  uploadedById String @map("uploaded_by_id") @db.Uuid
+  updatedById  String @map("updated_by_id") @db.Uuid
+
+  uploadedBy User @relation("ClientDocumentUploadedBy",fields: [uploadedById],references: [id],onDelete: Restrict,onUpdate: Cascade)
+
+  updatedBy User @relation("ClientDocumentUpdatedBy",fields: [updatedById],references: [id],onDelete: Restrict,onUpdate: Cascade)
+
+  archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@index([clientId, deletedAt])
+  @@index([clientId, category, deletedAt])
+  @@index([status, deletedAt])
+  @@index([visibility, deletedAt])
+  @@index([uploadedById])
+  @@index([documentDate])
+  @@index([createdAt])
+  @@index([checksum])
+  @@map("client_documents")
 }
 
 enum AttendanceFormStatus {
