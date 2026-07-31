@@ -68,3 +68,14 @@ export const ACTIVE_PROCESS_STATUSES: ProcessStatus[] = [
   "EM_ANDAMENTO",
   "AGUARDANDO_DECISAO",
 ];
+
+/**
+ * Status oferecidos no cadastro. Um processo recém-criado não nasce
+ * encerrado, suspenso ou arquivado — esses só aparecem na edição.
+ */
+export const INITIAL_PROCESS_STATUSES: ProcessStatus[] = [
+  "EM_ANALISE",
+  "AGUARDANDO_DOCUMENTOS",
+  "AGUARDANDO_DISTRIBUICAO",
+  "EM_ANDAMENTO",
+];

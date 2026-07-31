@@ -43,6 +43,11 @@ export const getAttendanceFormDetail = cache(
           select: { type: true },
           orderBy: { position: "asc" },
         },
+        // Relação um-para-um: revela se a ficha já originou um processo,
+        // o que decide entre "Gerar processo" e "Abrir processo".
+        process: {
+          select: { id: true },
+        },
       },
     });
 

@@ -45,6 +45,14 @@ export const buildCasesHref = (
   return query ? `${base}?${query}` : base;
 };
 
+/** Cadastro a partir de uma ficha finalizada. */
+export const buildCaseCreateHref = (clientId: string, formId: string) =>
+  `${buildClientCasesHref(clientId)}/upsert?formId=${formId}`;
+
+/** Edição de um processo existente. */
+export const buildCaseEditHref = (clientId: string, caseId: string) =>
+  `${buildClientCasesHref(clientId)}/upsert?caseId=${caseId}`;
+
 export const hasActiveCasesFilters = (params: ListClientCasesParams) =>
   Boolean(
     params.search ||

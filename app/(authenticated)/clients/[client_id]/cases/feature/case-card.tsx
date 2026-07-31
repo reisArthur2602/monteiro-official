@@ -1,12 +1,15 @@
+import { SquarePen } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import { formatUpdatedAt } from "../../../utils/format-updated-at";
 import { buildIntakeDetailHref } from "../../intakes/utils/build-intakes-href";
 import { formatDate } from "../../utils/format-date";
 import type { ClientCaseListItem } from "../queries/list-client-cases";
+import { buildCaseEditHref } from "../utils/build-cases-href";
 import {
   processClientRoleLabels,
   processStatusBadgeClasses,
@@ -136,10 +139,24 @@ export const CaseCard = ({ clientId, item, index }: CaseCardProps) => {
         </div>
       </div>
 
-      <footer className="flex min-h-13 items-center justify-between gap-3 border-t px-3.5 text-[9px] text-muted-foreground">
+      <footer className="flex min-h-13 items-center justify-between gap-3 border-t px-3.5 pr-1.5 text-[9px] text-muted-foreground">
         <span className="truncate">
           Movimentado {formatUpdatedAt(item.updatedAt)}
         </span>
+
+        <Button
+          asChild
+          variant="ghost"
+          size="icon"
+          className="shrink-0 text-muted-foreground hover:text-foreground"
+        >
+          <Link
+            href={buildCaseEditHref(clientId, item.id)}
+            aria-label={`Editar ${item.title}`}
+          >
+            <SquarePen aria-hidden="true" />
+          </Link>
+        </Button>
       </footer>
     </article>
   );

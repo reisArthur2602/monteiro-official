@@ -105,7 +105,12 @@ const AttendanceFormDetailPage = async ({
         <aside className="grid gap-4 lg:sticky lg:top-20">
           <AttendanceInfoSummaryPanel form={form} statusLabel={statusLabel} />
 
-          <AttendanceDetailActionsPanel clientId={clientId} formId={formId} />
+          <AttendanceDetailActionsPanel
+            clientId={clientId}
+            formId={formId}
+            status={form.status}
+            caseId={form.process?.id ?? null}
+          />
         </aside>
 
         <AttendanceDocumentPreview
