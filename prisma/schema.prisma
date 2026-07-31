@@ -59,6 +59,23 @@ model User {
   clientDocumentsUploaded ClientDocument[] @relation("ClientDocumentUploadedBy")
   clientDocumentsUpdated  ClientDocument[] @relation("ClientDocumentUpdatedBy")
 
+  processesResponsible Process[] @relation("ProcessResponsible")
+  processesCreated     Process[] @relation("ProcessCreatedBy")
+  processesUpdated     Process[] @relation("ProcessUpdatedBy")
+
+  processPartiesCreated ProcessParty[] @relation("ProcessPartyCreatedBy")
+  processPartiesUpdated ProcessParty[] @relation("ProcessPartyUpdatedBy")
+
+  processMovementsCreated ProcessMovement[] @relation("ProcessMovementCreatedBy")
+  processDocumentsAdded   ProcessDocument[] @relation("ProcessDocumentAddedBy")
+
+  processDeadlinesResponsible ProcessDeadline[] @relation("ProcessDeadlineResponsible")
+  processDeadlinesCompleted   ProcessDeadline[] @relation("ProcessDeadlineCompletedBy")
+  processDeadlinesCreated     ProcessDeadline[] @relation("ProcessDeadlineCreatedBy")
+  processDeadlinesUpdated     ProcessDeadline[] @relation("ProcessDeadlineUpdatedBy")
+
+  processActivities ProcessActivity[] @relation("ProcessActivityActor")
+
   @@index([deletedAt])
   @@map("users")
 }
@@ -222,6 +239,7 @@ model Client {
 
   attendanceForms ClientAttendanceForm[] @relation("ClientAttendanceForms")
   documents       ClientDocument[]       @relation("ClientDocuments")
+  processes       Process[]              @relation("ClientProcesses")
 
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -329,6 +347,8 @@ model ClientDocument {
   uploadedBy User @relation("ClientDocumentUploadedBy", fields: [uploadedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   updatedBy User @relation("ClientDocumentUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  processLinks ProcessDocument[]
 
   archivedAt DateTime? @map("archived_at") @db.Timestamptz(3)
 
@@ -438,6 +458,9 @@ model ClientAttendanceForm {
 
   actions ClientAttendanceAction[]
 
+  /// Uma ficha pode não ter processo, mas nunca pode originar mais de um.
+  process Process? @relation("AttendanceFormProcess")
+
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
@@ -469,4 +492,358 @@ model ClientAttendanceAction {
   @@index([attendanceFormId, position])
   @@index([type])
   @@map("client_attendance_actions")
+}
+
+enum ProcessStatus {
+  EM_ANALISE
+  AGUARDANDO_DOCUMENTOS
+  AGUARDANDO_DISTRIBUICAO
+  EM_ANDAMENTO
+  AGUARDANDO_DECISAO
+  SUSPENSO
+  ENCERRADO
+  ARQUIVADO
+  CANCELADO
+}
+
+enum ProcessType {
+  JUDICIAL
+  ADMINISTRATIVO
+  EXTRAJUDICIAL
+  CONSULTIVO
+}
+
+enum ProcessClientRole {
+  AUTOR
+  REU
+  INTERESSADO
+  TERCEIRO
+  REQUERENTE
+  REQUERIDO
+  EXEQUENTE
+  EXECUTADO
+  RECORRENTE
+  RECORRIDO
+  OUTRO
+}
+
+enum ProcessPartyType {
+  PESSOA_FISICA
+  PESSOA_JURIDICA
+  ORGAO_PUBLICO
+  OUTRO
+}
+
+enum ProcessPartyRole {
+  AUTOR
+  REU
+  INTERESSADO
+  TERCEIRO
+  REQUERENTE
+  REQUERIDO
+  EXEQUENTE
+  EXECUTADO
+  RECORRENTE
+  RECORRIDO
+  ADVOGADO
+  REPRESENTANTE
+  TESTEMUNHA
+  OUTRO
+}
+
+enum ProcessMovementSource {
+  MANUAL
+  TRIBUNAL
+  IMPORTACAO
+  SISTEMA
+}
+
+enum ProcessDocumentRole {
+  PETICAO
+  DECISAO
+  SENTENCA
+  ACORDAO
+  CONTRATO
+  PROCURACAO
+  COMPROVANTE
+  PROVA
+  DOCUMENTO_CLIENTE
+  DOCUMENTO_PARTE_CONTRARIA
+  OUTRO
+}
+
+enum ProcessDeadlineStatus {
+  ABERTO
+  EM_ANDAMENTO
+  CONCLUIDO
+  CANCELADO
+  VENCIDO
+}
+
+enum ProcessActivityType {
+  PROCESSO_CRIADO
+  PROCESSO_ATUALIZADO
+  STATUS_ALTERADO
+  MOVIMENTACAO_CRIADA
+  DOCUMENTO_VINCULADO
+  DOCUMENTO_DESVINCULADO
+  PRAZO_CRIADO
+  PRAZO_ATUALIZADO
+  PRAZO_CONCLUIDO
+  PARTE_ADICIONADA
+  PARTE_ATUALIZADA
+  RESPONSAVEL_ALTERADO
+  OUTRO
+}
+
+/// Processo criado obrigatoriamente a partir de uma ficha de atendimento.
+///
+/// A aplicação deve validar em transação:
+/// - a ficha pertence ao mesmo cliente;
+/// - a ficha está FINALIZADA;
+/// - a ficha não foi excluída;
+/// - a ficha ainda não possui processo.
+///
+/// `attendanceFormId @unique` garante no banco um único processo por ficha.
+model Process {
+  id String @id @default(uuid()) @db.Uuid
+
+  clientId String @map("client_id") @db.Uuid
+
+  client Client @relation("ClientProcesses", fields: [clientId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  attendanceFormId String @unique @map("attendance_form_id") @db.Uuid
+
+  attendanceForm ClientAttendanceForm @relation("AttendanceFormProcess", fields: [attendanceFormId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  internalCode String @unique @map("internal_code") @db.VarChar(40)
+
+  /// Número CNJ ou identificador externo. Pode ser nulo antes da distribuição.
+  number String? @unique @db.VarChar(40)
+
+  title     String @db.VarChar(180)
+  legalArea String @map("legal_area") @db.VarChar(80)
+
+  type       ProcessType
+  status     ProcessStatus     @default(EM_ANALISE)
+  clientRole ProcessClientRole @map("client_role")
+
+  court        String? @db.VarChar(180)
+  courtUnit    String? @map("court_unit") @db.VarChar(180)
+  jurisdiction String? @db.VarChar(160)
+  state        String? @db.Char(2)
+
+  filingDate DateTime? @map("filing_date") @db.Date
+  closedAt   DateTime? @map("closed_at") @db.Timestamptz(3)
+
+  notes String? @db.Text
+
+  responsibleId String @map("responsible_id") @db.Uuid
+  createdById   String @map("created_by_id") @db.Uuid
+  updatedById   String @map("updated_by_id") @db.Uuid
+
+  responsible User @relation("ProcessResponsible", fields: [responsibleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  createdBy User @relation("ProcessCreatedBy", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  updatedBy User @relation("ProcessUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  parties    ProcessParty[]
+  movements  ProcessMovement[]
+  documents  ProcessDocument[]
+  deadlines  ProcessDeadline[]
+  activities ProcessActivity[]
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@index([clientId, deletedAt])
+  @@index([responsibleId, deletedAt])
+  @@index([status, deletedAt])
+  @@index([type, deletedAt])
+  @@index([legalArea, deletedAt])
+  @@index([filingDate])
+  @@index([updatedAt])
+  @@map("processes")
+}
+
+model ProcessParty {
+  id String @id @default(uuid()) @db.Uuid
+
+  processId String @map("process_id") @db.Uuid
+
+  process Process @relation(fields: [processId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  type ProcessPartyType
+  role ProcessPartyRole
+
+  name     String  @db.VarChar(180)
+  document String? @db.VarChar(14)
+  email    String? @db.VarChar(254)
+  phone    String? @db.VarChar(15)
+
+  isClient Boolean @default(false) @map("is_client")
+
+  representativeName String? @map("representative_name") @db.VarChar(180)
+
+  notes    String? @db.Text
+  position Int     @default(0)
+
+  createdById String @map("created_by_id") @db.Uuid
+  updatedById String @map("updated_by_id") @db.Uuid
+
+  createdBy User @relation("ProcessPartyCreatedBy", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  updatedBy User @relation("ProcessPartyUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@index([processId, deletedAt])
+  @@index([processId, role])
+  @@index([document])
+  @@index([processId, position])
+  @@map("process_parties")
+}
+
+model ProcessMovement {
+  id String @id @default(uuid()) @db.Uuid
+
+  processId String @map("process_id") @db.Uuid
+
+  process Process @relation(fields: [processId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  title       String  @db.VarChar(180)
+  description String? @db.Text
+
+  movementAt DateTime              @map("movement_at") @db.Timestamptz(3)
+  source     ProcessMovementSource @default(MANUAL)
+
+  externalCode    String? @map("external_code") @db.VarChar(100)
+  externalPayload Json?   @map("external_payload")
+
+  createdById String @map("created_by_id") @db.Uuid
+
+  createdBy User @relation("ProcessMovementCreatedBy", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  documents ProcessDocument[]
+  deadlines ProcessDeadline[]
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@index([processId, movementAt])
+  @@index([processId, deletedAt])
+  @@index([source])
+  @@index([externalCode])
+  @@map("process_movements")
+}
+
+/// Vínculo entre o processo e um documento já pertencente ao arquivo do cliente.
+///
+/// O arquivo e seus metadados permanecem em `ClientDocument`. Assim, um
+/// documento processual também aparece automaticamente na aba Documentos
+/// do cliente e não há duplicação da chave do storage.
+model ProcessDocument {
+  id String @id @default(uuid()) @db.Uuid
+
+  processId        String  @map("process_id") @db.Uuid
+  clientDocumentId String  @map("client_document_id") @db.Uuid
+  movementId       String? @map("movement_id") @db.Uuid
+
+  role     ProcessDocumentRole @default(OUTRO)
+  notes    String?             @db.VarChar(500)
+  position Int                 @default(0)
+
+  process Process @relation(fields: [processId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  clientDocument ClientDocument @relation(fields: [clientDocumentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  movement ProcessMovement? @relation(fields: [movementId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  addedById String @map("added_by_id") @db.Uuid
+
+  addedBy User @relation("ProcessDocumentAddedBy", fields: [addedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([processId, clientDocumentId])
+  @@index([processId, position])
+  @@index([clientDocumentId])
+  @@index([movementId])
+  @@index([role])
+  @@index([addedById])
+  @@map("process_documents")
+}
+
+model ProcessDeadline {
+  id String @id @default(uuid()) @db.Uuid
+
+  processId  String  @map("process_id") @db.Uuid
+  movementId String? @map("movement_id") @db.Uuid
+
+  process Process @relation(fields: [processId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  movement ProcessMovement? @relation(fields: [movementId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  title       String  @db.VarChar(180)
+  description String? @db.Text
+
+  status ProcessDeadlineStatus @default(ABERTO)
+  dueAt  DateTime              @map("due_at") @db.Timestamptz(3)
+
+  responsibleId String  @map("responsible_id") @db.Uuid
+  completedById String? @map("completed_by_id") @db.Uuid
+
+  responsible User @relation("ProcessDeadlineResponsible", fields: [responsibleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  completedBy User? @relation("ProcessDeadlineCompletedBy", fields: [completedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(3)
+
+  createdById String @map("created_by_id") @db.Uuid
+  updatedById String @map("updated_by_id") @db.Uuid
+
+  createdBy User @relation("ProcessDeadlineCreatedBy", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  updatedBy User @relation("ProcessDeadlineUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@index([processId, deletedAt])
+  @@index([responsibleId, status])
+  @@index([status, dueAt])
+  @@index([movementId])
+  @@index([dueAt])
+  @@map("process_deadlines")
+}
+
+model ProcessActivity {
+  id String @id @default(uuid()) @db.Uuid
+
+  processId String @map("process_id") @db.Uuid
+
+  process Process @relation(fields: [processId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  type ProcessActivityType
+
+  title       String  @db.VarChar(180)
+  description String? @db.Text
+  metadata    Json?
+
+  actorId String? @map("actor_id") @db.Uuid
+
+  actor User? @relation("ProcessActivityActor", fields: [actorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([processId, createdAt])
+  @@index([actorId])
+  @@index([type])
+  @@map("process_activities")
 }

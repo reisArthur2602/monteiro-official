@@ -9,37 +9,45 @@ import {
   buildClientHref,
   buildClientIntakesHref,
 } from "../../utils/build-clients-href";
+import { buildClientCasesHref } from "../cases/utils/build-cases-href";
 import { buildClientDocsHref } from "../docs/utils/build-docs-href";
 
 type ClientTabsProps = {
   clientId: string;
   intakesCount: number;
   documentsCount: number;
+  casesCount: number;
 };
 
 /**
  * Abas do cliente. Só entram aqui seções com dado real por trás — nada de
- * Processos, Atendimentos ou Agenda enquanto esses modelos não existirem,
- * para não linkar para lugar nenhum.
+ * Atendimentos ou Agenda enquanto esses modelos não existirem, para não
+ * linkar para lugar nenhum.
  */
 export const ClientTabs = ({
   clientId,
   intakesCount,
   documentsCount,
+  casesCount,
 }: ClientTabsProps) => {
   const pathname = usePathname();
 
   const tabs = [
     { label: "Visão geral", href: buildClientHref(clientId), count: null },
     {
-      label: "Fichas",
-      href: buildClientIntakesHref(clientId),
-      count: intakesCount,
+      label: "Processos",
+      href: buildClientCasesHref(clientId),
+      count: casesCount,
     },
     {
       label: "Documentos",
       href: buildClientDocsHref(clientId),
       count: documentsCount,
+    },
+    {
+      label: "Fichas",
+      href: buildClientIntakesHref(clientId),
+      count: intakesCount,
     },
   ];
 
