@@ -41,6 +41,10 @@ export const buildCasesHref = (clientId: string, params: Partial<ListClientCases
     return query ? `${base}?${query}` : base;
 };
 
+/** Rota de detalhe/contexto de um processo específico. */
+export const buildClientCaseHref = (clientId: string, caseId: string) =>
+    `${buildClientCasesHref(clientId)}/${caseId}`;
+
 /** Cadastro a partir de uma ficha finalizada. */
 export const buildCaseCreateHref = (clientId: string, formId: string) =>
     `${buildClientCasesHref(clientId)}/upsert?formId=${formId}`;

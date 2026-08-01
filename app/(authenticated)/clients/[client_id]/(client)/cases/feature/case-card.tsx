@@ -9,7 +9,7 @@ import { formatUpdatedAt } from '../../../../utils/format-updated-at';
 import { buildIntakeDetailHref } from '../../intakes/utils/build-intakes-href';
 import { formatDate } from '../../utils/format-date';
 import type { ClientCaseListItem } from '../queries/list-client-cases';
-import { buildCaseEditHref } from '../utils/build-cases-href';
+import { buildCaseEditHref, buildClientCaseHref } from '../utils/build-cases-href';
 import {
     processClientRoleLabels,
     processStatusBadgeClasses,
@@ -64,7 +64,12 @@ export const CaseCard = ({ clientId, item, index }: CaseCardProps) => {
                 </span>
 
                 <h3 className="line-clamp-2 font-heading text-xl leading-tight font-semibold tracking-tight">
-                    {item.title}
+                    <Link
+                        href={buildClientCaseHref(clientId, item.id)}
+                        className="outline-none hover:text-primary focus-visible:underline focus-visible:underline-offset-4"
+                    >
+                        {item.title}
+                    </Link>
                 </h3>
 
                 <p className="truncate font-mono text-[8.5px] text-muted-foreground">
