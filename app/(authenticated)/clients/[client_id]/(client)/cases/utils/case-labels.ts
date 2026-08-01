@@ -1,5 +1,7 @@
 import type {
   ProcessClientRole,
+  ProcessDeadlineStatus,
+  ProcessPartyRole,
   ProcessStatus,
   ProcessType,
 } from "@/app/generated/prisma/enums";
@@ -79,3 +81,43 @@ export const INITIAL_PROCESS_STATUSES: ProcessStatus[] = [
   "AGUARDANDO_DISTRIBUICAO",
   "EM_ANDAMENTO",
 ];
+
+export const processDeadlineStatusLabels: Record<ProcessDeadlineStatus, string> = {
+  ABERTO: "Aberto",
+  EM_ANDAMENTO: "Em andamento",
+  CONCLUIDO: "Concluído",
+  CANCELADO: "Cancelado",
+  VENCIDO: "Vencido",
+};
+
+export const processDeadlineStatusBadgeClasses: Record<ProcessDeadlineStatus, string> = {
+  ABERTO: "border-chart-3/40 bg-chart-3/12 text-chart-3",
+  EM_ANDAMENTO: "border-chart-3/40 bg-chart-3/12 text-chart-3",
+  VENCIDO: "border-destructive/30 bg-destructive/8 text-destructive",
+  CONCLUIDO: "border-chart-2/40 bg-chart-2/12 text-chart-2",
+  CANCELADO: "border-border bg-muted text-muted-foreground",
+};
+
+/** Status que ainda pedem alguma providência — usados para "prazos abertos". */
+export const OPEN_DEADLINE_STATUSES: ProcessDeadlineStatus[] = [
+  "ABERTO",
+  "EM_ANDAMENTO",
+  "VENCIDO",
+];
+
+export const processPartyRoleLabels: Record<ProcessPartyRole, string> = {
+  AUTOR: "Autor",
+  REU: "Réu",
+  INTERESSADO: "Interessado",
+  TERCEIRO: "Terceiro",
+  REQUERENTE: "Requerente",
+  REQUERIDO: "Requerido",
+  EXEQUENTE: "Exequente",
+  EXECUTADO: "Executado",
+  RECORRENTE: "Recorrente",
+  RECORRIDO: "Recorrido",
+  ADVOGADO: "Advogado",
+  REPRESENTANTE: "Representante",
+  TESTEMUNHA: "Testemunha",
+  OUTRO: "Outro",
+};
