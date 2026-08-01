@@ -76,7 +76,9 @@ export const getCaseOverview = cache(
           _count: {
             select: {
               movements: { where: { deletedAt: null } },
-              documents: true,
+              documents: {
+                where: { deletedAt: null, clientDocument: { deletedAt: null } },
+              },
               deadlines: {
                 where: { deletedAt: null, status: { in: OPEN_DEADLINE_STATUSES } },
               },
@@ -131,7 +133,11 @@ export const getCaseOverview = cache(
         take: 3,
       }),
       prisma.processDocument.findMany({
-        where: { process: scopedProcess },
+        where: {
+          deletedAt: null,
+          process: scopedProcess,
+          clientDocument: { deletedAt: null },
+        },
         select: {
           id: true,
           createdAt: true,

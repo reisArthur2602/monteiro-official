@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 import { buildClientCaseHref } from '../../../../(client)/cases/utils/build-cases-href';
+import { buildCaseDocsHref } from '../docs/utils/build-case-docs-href';
 
 type CaseTabsProps = {
     clientId: string;
@@ -13,14 +14,16 @@ type CaseTabsProps = {
 };
 
 /**
- * Abas do processo. Só entra "Visão geral" por ora — Movimentações,
- * Documentos, Prazos, Partes e Atividade ganham aba quando a rota de cada
- * uma existir, para não linkar para lugar nenhum.
+ * Abas do processo. Movimentações, Prazos, Partes e Atividade ganham aba
+ * quando a rota de cada uma existir, para não linkar para lugar nenhum.
  */
 export const CaseTabs = ({ clientId, caseId }: CaseTabsProps) => {
     const pathname = usePathname();
 
-    const tabs = [{ label: 'Visão geral', href: buildClientCaseHref(clientId, caseId) }];
+    const tabs = [
+        { label: 'Visão geral', href: buildClientCaseHref(clientId, caseId) },
+        { label: 'Documentos', href: buildCaseDocsHref(clientId, caseId) },
+    ];
 
     return (
         <nav

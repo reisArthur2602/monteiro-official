@@ -747,6 +747,12 @@ model ProcessMovement {
 /// O arquivo e seus metadados permanecem em `ClientDocument`. Assim, um
 /// documento processual também aparece automaticamente na aba Documentos
 /// do cliente e não há duplicação da chave do storage.
+///
+/// Desvincular é exclusão lógica (`deletedAt`): o documento sai do
+/// processo, mas continua no arquivo do cliente. Como
+/// `@@unique([processId, clientDocumentId])` também alcança os vínculos
+/// desfeitos, revincular o mesmo documento deve reativar a linha
+/// existente em vez de criar outra.
 model ProcessDocument {
   id String @id @default(uuid()) @db.Uuid
 
@@ -768,9 +774,12 @@ model ProcessDocument {
 
   addedBy User @relation("ProcessDocumentAddedBy", fields: [addedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
 
   @@unique([processId, clientDocumentId])
+  @@index([processId, deletedAt])
+  @@index([processId, role, deletedAt])
   @@index([processId, position])
   @@index([clientDocumentId])
   @@index([movementId])
