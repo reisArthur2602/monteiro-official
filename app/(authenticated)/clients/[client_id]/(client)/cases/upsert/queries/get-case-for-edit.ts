@@ -16,7 +16,7 @@ export const getCaseForEdit = cache(
   async (clientId: string, caseId: string) => {
     await verifyAuth();
 
-    const item = await prisma.process.findFirst({
+    const item = await prisma.process.findUnique({
       where: {
         id: caseId,
         clientId,

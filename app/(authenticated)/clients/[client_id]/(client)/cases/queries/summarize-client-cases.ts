@@ -1,22 +1,16 @@
 import { cache } from "react";
 
-import {
-  ProcessDeadlineStatus,
-  ProcessStatus,
-} from "@/app/generated/prisma/enums";
+import { ProcessStatus } from "@/app/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/utils/auth";
 
-import { ACTIVE_PROCESS_STATUSES } from "../utils/case-labels";
+import {
+  ACTIVE_PROCESS_STATUSES,
+  OPEN_DEADLINE_STATUSES,
+} from "../utils/case-labels";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
-
-const OPEN_DEADLINE_STATUSES = [
-  ProcessDeadlineStatus.ABERTO,
-  ProcessDeadlineStatus.EM_ANDAMENTO,
-  ProcessDeadlineStatus.VENCIDO,
-];
 
 /**
  * Números da faixa de resumo e contador da aba "Processos".
@@ -80,7 +74,11 @@ export const summarizeClientCases = cache(async (clientId: string) => {
     }),
 
     prisma.processDocument.count({
-      where: { process: scopedProcess },
+      where: {
+        deletedAt: null,
+        process: scopedProcess,
+        clientDocument: { deletedAt: null },
+      },
     }),
   ]);
 

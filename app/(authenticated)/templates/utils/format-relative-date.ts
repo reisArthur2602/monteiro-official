@@ -9,8 +9,13 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
 /**
  * Converte a data de atualização em um texto curto e relativo,
  * voltando para a data absoluta quando a diferença passa de uma semana.
+ *
+ * Não é o mesmo `formatUpdatedAt` de `clients/utils` — aquele devolve
+ * "Hoje, 09:18" (com horário, para atualizações recentes); este devolve
+ * "hoje" / "há 3 dias" / "em 12/03/2026". Nomes iguais para comportamentos
+ * diferentes já causaram confusão, por isso o nome próprio aqui.
  */
-export const formatUpdatedAt = (isoDate: string) => {
+export const formatRelativeDate = (isoDate: string) => {
   const updatedAt = new Date(isoDate);
 
   const startOfUpdatedAt = Date.UTC(

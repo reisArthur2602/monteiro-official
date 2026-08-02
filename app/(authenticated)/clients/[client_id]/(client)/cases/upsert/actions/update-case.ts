@@ -47,7 +47,7 @@ export const updateCase = async (
     const outcome = await prisma.$transaction(async (tx): Promise<UpdateOutcome> => {
       // Autorização por recurso: o processo precisa existir, estar vivo e
       // pertencer ao cliente da rota.
-      const existing = await tx.process.findFirst({
+      const existing = await tx.process.findUnique({
         where: {
           id: input.caseId,
           clientId: input.clientId,

@@ -48,7 +48,7 @@ export const POST = async (request: Request, { params }: UploadRouteContext) => 
 
         const clientId = parsedId.data;
 
-        const client = await prisma.client.findFirst({
+        const client = await prisma.client.findUnique({
             where: { id: clientId, deletedAt: null },
             select: { id: true },
         });

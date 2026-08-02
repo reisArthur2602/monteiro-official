@@ -54,7 +54,7 @@ export const createCase = async (
       // As quatro regras do vínculo, revalidadas aqui mesmo: a ficha
       // pertence a este cliente, está viva, está finalizada e ainda não
       // originou processo. Nada disso vem do navegador.
-      const form = await tx.clientAttendanceForm.findFirst({
+      const form = await tx.clientAttendanceForm.findUnique({
         where: {
           id: input.formId,
           clientId: input.clientId,

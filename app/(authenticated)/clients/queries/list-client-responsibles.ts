@@ -3,6 +3,9 @@ import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { verifyAuth } from "@/utils/auth";
 
+/** Teto defensivo: nunca deve ser atingido pelo quadro real de um escritório. */
+const MAX_OPTIONS = 200;
+
 /**
  * Usuários que respondem por ao menos um cliente ativo na carteira.
  *
@@ -26,5 +29,6 @@ export const listClientResponsibles = cache(async () => {
     orderBy: {
       name: "asc",
     },
+    take: MAX_OPTIONS,
   });
 });

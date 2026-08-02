@@ -42,7 +42,7 @@ export const getCaseOverview = cache(
       mainParties,
       recentDocuments,
     ] = await prisma.$transaction([
-      prisma.process.findFirst({
+      prisma.process.findUnique({
         where: scopedProcess,
         select: {
           id: true,

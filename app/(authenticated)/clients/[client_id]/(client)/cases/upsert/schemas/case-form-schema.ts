@@ -5,7 +5,7 @@ import {
   ProcessStatus,
   ProcessType,
 } from "@/app/generated/prisma/enums";
-import { brazilianStateValues } from "../../../upsert/data/brazilian-states";
+import { brazilianStateValues } from "../../../../../upsert/data/brazilian-states";
 
 
 

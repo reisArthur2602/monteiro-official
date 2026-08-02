@@ -29,7 +29,7 @@ export const unlinkCaseDocument = async (
         // Cliente e processo entram no `where` para que um vínculo de outro
         // processo simplesmente não seja encontrado, em vez de revelar que
         // ele existe.
-        const existing = await prisma.processDocument.findFirst({
+        const existing = await prisma.processDocument.findUnique({
             where: {
                 id: input.linkId,
                 deletedAt: null,

@@ -1,5 +1,5 @@
 import { redirectRole } from '@/utils';
-import { PropsWithChildren } from 'react';
+import type { PropsWithChildren } from 'react';
 
 const TemplatesLayout = async ({ children }: PropsWithChildren) => {
     await redirectRole(['ADMINISTRADOR']);

@@ -1,4 +1,5 @@
 export { getSession } from "./get-session";
+export { hasRole } from "./has-role";
 export { redirectAuth, redirectIfAuthenticated } from "./redirect-auth";
 export { redirectRole } from "./redirect-role";
 export {

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { TemplateStatus } from "@/app/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import type { ActionResult } from "@/utils";
-import { verifyAuth } from "@/utils/auth";
+import { verifyRole } from "@/utils/auth";
 
 import {
   type CreateTemplateDraftInput,
@@ -31,7 +31,9 @@ export const createTemplateDraft = async (
   input: CreateTemplateDraftInput,
 ): Promise<ActionResult<CreateTemplateDraftResult | null>> => {
   try {
-    const user = await verifyAuth();
+    // Templates são um recurso de escritório, não do usuário: só quem
+    // administra o escritório pode criar, editar e publicar.
+    const user = await verifyRole(["ADMINISTRADOR"]);
 
     const parsed = createTemplateDraftSchema.safeParse(input);
 
@@ -81,6 +83,13 @@ export const createTemplateDraft = async (
       },
     };
   } catch (error) {
+    if (error instanceof Error && error.message === "FORBIDDEN") {
+      return {
+        ok: false,
+        message: "Você não possui permissão para criar templates",
+      };
+    }
+
     console.error("[createTemplateDraft]", error);
 
     return {

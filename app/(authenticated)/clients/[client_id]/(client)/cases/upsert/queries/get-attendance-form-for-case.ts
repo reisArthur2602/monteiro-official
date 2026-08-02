@@ -15,7 +15,7 @@ export const getAttendanceFormForCase = cache(
   async (clientId: string, formId: string) => {
     await verifyAuth();
 
-    const form = await prisma.clientAttendanceForm.findFirst({
+    const form = await prisma.clientAttendanceForm.findUnique({
       where: {
         id: formId,
         clientId,

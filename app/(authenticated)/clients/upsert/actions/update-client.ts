@@ -39,7 +39,7 @@ export const updateClient = async (
 
     // Autorização por recurso: só clientes vivos podem ser alterados, e o
     // id vem da rota, nunca de um campo do formulário.
-    const client = await prisma.client.findFirst({
+    const client = await prisma.client.findUnique({
       where: {
         id: input.clientId,
         deletedAt: null,

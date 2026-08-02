@@ -27,7 +27,7 @@ export const login = async (input: LoginInput): Promise<ActionResult<null>> => {
 
     const { email, password, persistentSession } = parsed.data;
 
-    const user = await prisma.user.findFirst({
+    const user = await prisma.user.findUnique({
       where: {
         email: email.toLowerCase(),
         deletedAt: null,

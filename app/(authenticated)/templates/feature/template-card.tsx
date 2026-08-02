@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 import type { TemplateListItem } from "../queries/list-templates";
-import { formatUpdatedAt } from "../utils/format-updated-at";
+import { formatRelativeDate } from "../utils/format-relative-date";
 import {
   templateCategoryLabels,
   templateStatusBadgeClasses,
@@ -86,7 +86,7 @@ export const TemplateCard = ({ template }: TemplateCardProps) => {
       </div>
 
       <footer className="flex items-center justify-between gap-3 border-t bg-muted px-5 py-3 text-xs text-muted-foreground">
-        <span>Atualizado {formatUpdatedAt(template.updatedAt)}</span>
+        <span>Atualizado {formatRelativeDate(template.updatedAt)}</span>
 
         <span className="font-mono font-medium">
           {template.currentVersion > 0

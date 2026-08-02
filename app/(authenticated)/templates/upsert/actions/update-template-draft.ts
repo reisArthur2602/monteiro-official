@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import type { ActionResult } from "@/utils";
-import { verifyAuth } from "@/utils/auth";
+import { verifyRole } from "@/utils/auth";
 
 import {
   type UpdateTemplateDraftInput,
@@ -29,7 +29,9 @@ export const updateTemplateDraft = async (
   input: UpdateTemplateDraftInput,
 ): Promise<ActionResult<UpdateTemplateDraftResult | null>> => {
   try {
-    const user = await verifyAuth();
+    // Templates são um recurso de escritório, não do usuário: só quem
+    // administra o escritório pode criar, editar e publicar.
+    const user = await verifyRole(["ADMINISTRADOR"]);
 
     const parsed = updateTemplateDraftSchema.safeParse(input);
 
@@ -44,7 +46,7 @@ export const updateTemplateDraft = async (
     const { templateId, revision, values } = parsed.data;
 
     // Autorização por recurso: só rascunhos de templates vivos.
-    const template = await prisma.template.findFirst({
+    const template = await prisma.template.findUnique({
       where: {
         id: templateId,
         deletedAt: null,
@@ -132,6 +134,13 @@ export const updateTemplateDraft = async (
       data: { revision: nextRevision },
     };
   } catch (error) {
+    if (error instanceof Error && error.message === "FORBIDDEN") {
+      return {
+        ok: false,
+        message: "Você não possui permissão para editar templates",
+      };
+    }
+
     console.error("[updateTemplateDraft]", error);
 
     return {

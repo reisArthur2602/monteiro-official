@@ -17,7 +17,7 @@ export const deleteAttendanceForm = async (
   try {
     await verifyAuth();
 
-    const existing = await prisma.clientAttendanceForm.findFirst({
+    const existing = await prisma.clientAttendanceForm.findUnique({
       where: {
         id: input.formId,
         clientId: input.clientId,

@@ -15,7 +15,7 @@ import {
 
 
 import type { CaseFormValues } from "../schemas/case-form-schema";
-import { brazilianStates } from "../../../upsert/data/brazilian-states";
+import { brazilianStates } from "../../../../../upsert/data/brazilian-states";
 
 export const CaseCourtPanel = () => {
   const {

@@ -12,7 +12,7 @@ export const getClientDocumentFile = cache(
   async (clientId: string, documentId: string) => {
     await verifyAuth();
 
-    const document = await prisma.clientDocument.findFirst({
+    const document = await prisma.clientDocument.findUnique({
       where: {
         id: documentId,
         clientId,

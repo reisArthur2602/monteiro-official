@@ -2,17 +2,14 @@ import { redirect } from "next/navigation";
 
 import type { UserRole } from "@/app/generated/prisma/enums";
 
-import { getSession } from "./get-session";
+import { hasRole } from "./has-role";
+import { redirectAuth } from "./redirect-auth";
 
 export const redirectRole = async (allowedRoles: UserRole[]) => {
-  const user = await getSession();
+  const user = await redirectAuth();
 
-  if (!user) {
-    redirect("/auth");
-  }
-
-  if (!allowedRoles.includes(user.role)) {
-    redirect("/");
+  if (!hasRole(user.role, allowedRoles)) {
+    redirect("/unauthorized");
   }
 
   return user;

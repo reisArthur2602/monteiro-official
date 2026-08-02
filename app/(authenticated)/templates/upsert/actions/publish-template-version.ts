@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { TemplateStatus } from "@/app/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import type { ActionResult } from "@/utils";
-import { verifyAuth } from "@/utils/auth";
+import { verifyRole } from "@/utils/auth";
 
 import {
   type PublishTemplateVersionInput,
@@ -33,7 +33,9 @@ export const publishTemplateVersion = async (
   input: PublishTemplateVersionInput,
 ): Promise<ActionResult<PublishTemplateVersionResult | null>> => {
   try {
-    const user = await verifyAuth();
+    // Templates são um recurso de escritório, não do usuário: só quem
+    // administra o escritório pode criar, editar e publicar.
+    const user = await verifyRole(["ADMINISTRADOR"]);
 
     const parsed = publishTemplateVersionSchema.safeParse(input);
 
@@ -50,7 +52,7 @@ export const publishTemplateVersion = async (
     const nextRevision = revision + 1;
 
     const published = await prisma.$transaction(async (tx) => {
-      const template = await tx.template.findFirst({
+      const template = await tx.template.findUnique({
         where: {
           id: templateId,
           deletedAt: null,
@@ -124,6 +126,13 @@ export const publishTemplateVersion = async (
       data: published,
     };
   } catch (error) {
+    if (error instanceof Error && error.message === "FORBIDDEN") {
+      return {
+        ok: false,
+        message: "Você não possui permissão para publicar templates",
+      };
+    }
+
     if (error instanceof Error && error.message === REVISION_CONFLICT) {
       return {
         ok: false,

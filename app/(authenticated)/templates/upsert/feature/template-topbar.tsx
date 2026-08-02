@@ -105,11 +105,6 @@ export const TemplateTopbar = ({
               Salvar rascunho agora
             </DropdownMenuItem>
 
-            <DropdownMenuItem onSelect={onOpenSettings}>
-              <Settings2 />
-              Configurações do template
-            </DropdownMenuItem>
-
             <DropdownMenuSeparator />
 
             <DropdownMenuItem asChild>

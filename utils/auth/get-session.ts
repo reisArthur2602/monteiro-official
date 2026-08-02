@@ -19,7 +19,7 @@ export const getSession = cache(async () => {
     return null;
   }
 
-  const user = await prisma.user.findFirst({
+  const user = await prisma.user.findUnique({
     where: {
       id: payload.sub,
       deletedAt: null,

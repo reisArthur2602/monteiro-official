@@ -17,7 +17,6 @@ import { createCase } from '../actions/create-case';
 import { updateCase } from '../actions/update-case';
 import type { CaseFormValues } from '../schemas/case-form-schema';
 import { CaseCourtPanel } from './case-court-panel';
-import { CaseFormActions } from './case-form-actions';
 import { CaseIdentificationPanel } from './case-identification-panel';
 import { CaseMobileActions } from './case-mobile-actions';
 import { type CaseOrigin, CaseOriginPanel } from './case-origin-panel';
@@ -158,14 +157,6 @@ export const CaseUpsertScreen = ({
                             responsibleName={responsibleName}
                         />
 
-                        <CaseFormActions
-                            clientId={client.id}
-                            formId={origin.id}
-                            mode={mode}
-                            isPending={isPending}
-                            onSubmit={handleSubmit}
-                        />
-
                         <div className="sm:col-span-2 lg:col-span-1">
                             <CaseRuleNotes />
                         </div>
@@ -175,6 +166,7 @@ export const CaseUpsertScreen = ({
 
             <CaseMobileActions
                 clientId={client.id}
+                formId={origin.id}
                 mode={mode}
                 isPending={isPending}
                 onSubmit={handleSubmit}

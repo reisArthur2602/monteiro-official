@@ -56,7 +56,7 @@ export const updateAttendanceForm = async (
 
     // Autorização por recurso: a ficha precisa existir, estar viva e
     // pertencer ao cliente da rota.
-    const existing = await prisma.clientAttendanceForm.findFirst({
+    const existing = await prisma.clientAttendanceForm.findUnique({
       where: {
         id: input.formId,
         clientId: input.clientId,

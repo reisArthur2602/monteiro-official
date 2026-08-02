@@ -19,7 +19,7 @@ import {
     attendanceFormFinalizeSchema,
 } from '../schemas/attendance-form-schema';
 import { AttendanceActionsPanel } from './attendance-actions-panel';
-import { AttendanceFormActions } from './attendance-form-actions';
+import { AttendanceDeleteMenu } from './attendance-delete-menu';
 import { AttendanceInfoPanel } from './attendance-info-panel';
 import { AttendanceMobileActions } from './attendance-mobile-actions';
 import { AttendanceSummaryCard } from './attendance-summary-card';
@@ -201,7 +201,7 @@ export const AttendanceUpsertScreen = ({
                     </p>
                 </div>
 
-                <div className="hidden flex-wrap justify-end gap-2 sm:flex">
+                <div className="hidden flex-wrap items-center justify-end gap-2 sm:flex">
                     <Button asChild variant="outline">
                         <Link href={buildIntakesHref(client.id, {})}>Cancelar</Link>
                     </Button>
@@ -218,6 +218,10 @@ export const AttendanceUpsertScreen = ({
                     <Button type="button" disabled={isPending} onClick={handleFinalize}>
                         {isPending ? 'Salvando…' : 'Finalizar ficha'}
                     </Button>
+
+                    {mode === 'edit' ? (
+                        <AttendanceDeleteMenu isPending={isPending} onDelete={handleDelete} />
+                    ) : null}
                 </div>
             </header>
 
@@ -237,20 +241,11 @@ export const AttendanceUpsertScreen = ({
                         <AttendanceActionsPanel />
                     </div>
 
-                    <aside className="grid gap-4 sm:grid-cols-2 lg:sticky lg:top-20 lg:grid-cols-1">
+                    <aside className="grid gap-4 lg:sticky lg:top-20">
                         <AttendanceSummaryCard
                             clientName={clientName}
                             responsibleName={responsibleName}
                             status={status}
-                        />
-
-                        <AttendanceFormActions
-                            clientId={client.id}
-                            mode={mode}
-                            isPending={isPending}
-                            onSaveDraft={handleSaveDraft}
-                            onFinalize={handleFinalize}
-                            onDelete={mode === 'edit' ? handleDelete : undefined}
                         />
                     </aside>
                 </div>
@@ -258,9 +253,11 @@ export const AttendanceUpsertScreen = ({
 
             <AttendanceMobileActions
                 clientId={client.id}
+                mode={mode}
                 isPending={isPending}
                 onSaveDraft={handleSaveDraft}
                 onFinalize={handleFinalize}
+                onDelete={handleDelete}
             />
         </div>
     );

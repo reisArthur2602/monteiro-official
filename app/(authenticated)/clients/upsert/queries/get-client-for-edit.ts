@@ -15,7 +15,7 @@ import { mapClientToFormValues } from "../mappers/client-form-mapper";
 export const getClientForEdit = cache(async (clientId: string) => {
   await verifyAuth();
 
-  const client = await prisma.client.findFirst({
+  const client = await prisma.client.findUnique({
     where: {
       id: clientId,
       deletedAt: null,

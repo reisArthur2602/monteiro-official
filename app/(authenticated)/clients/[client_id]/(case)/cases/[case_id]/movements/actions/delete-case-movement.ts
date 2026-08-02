@@ -26,7 +26,7 @@ export const deleteCaseMovement = async (
         // Cliente e processo entram no `where`: uma movimentação de outro
         // processo simplesmente não é encontrada, em vez de revelar que
         // existe.
-        const existing = await prisma.processMovement.findFirst({
+        const existing = await prisma.processMovement.findUnique({
             where: {
                 id: input.movementId,
                 deletedAt: null,

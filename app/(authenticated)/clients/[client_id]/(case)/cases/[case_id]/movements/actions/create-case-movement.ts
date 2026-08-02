@@ -38,7 +38,7 @@ export const createCaseMovement = async (
 
         // Cliente e processo entram no `where`: um `caseId` de outro cliente
         // simplesmente não é encontrado, em vez de revelar que existe.
-        const item = await prisma.process.findFirst({
+        const item = await prisma.process.findUnique({
             where: { id: input.caseId, clientId: input.clientId, deletedAt: null },
             select: { id: true },
         });

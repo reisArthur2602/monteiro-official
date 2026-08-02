@@ -57,7 +57,7 @@ export const POST = async (request: Request, { params }: UploadRouteContext) => 
 
         // O cliente da rota entra no `where`: um processo de outro cliente
         // não é encontrado, em vez de revelar que existe.
-        const item = await prisma.process.findFirst({
+        const item = await prisma.process.findUnique({
             where: { id: caseId, clientId, deletedAt: null },
             select: { id: true },
         });

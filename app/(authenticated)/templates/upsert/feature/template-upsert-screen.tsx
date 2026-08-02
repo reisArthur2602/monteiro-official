@@ -64,10 +64,7 @@ export const TemplateUpsertScreen = () => {
         onValueChange={(value) => setActiveView(value as TemplateView)}
         className="flex-1 gap-0 px-3 pt-3 pb-4 sm:px-6"
       >
-        <TemplateViewTabs
-          onOpenVariables={openVariables}
-          onOpenSettings={openSettings}
-        />
+        <TemplateViewTabs />
 
         {/*
           `forceMount` mantém o editor montado ao alternar para a prévia:
@@ -96,11 +93,7 @@ export const TemplateUpsertScreen = () => {
         </TabsContent>
       </Tabs>
 
-      <TemplateMobileActions
-        onOpenVariables={openVariables}
-        onOpenSettings={openSettings}
-        onOpenPublish={openPublish}
-      />
+      <TemplateMobileActions onOpenSettings={openSettings} onOpenPublish={openPublish} />
 
       <TemplateSettingsSheet
         open={settingsOpen}

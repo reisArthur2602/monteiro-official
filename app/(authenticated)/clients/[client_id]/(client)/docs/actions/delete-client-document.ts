@@ -24,7 +24,7 @@ export const deleteClientDocument = async (
 
     // O `clientId` entra no `where` para que um id de outro cliente não
     // seja encontrado, em vez de revelar que o documento existe.
-    const existing = await prisma.clientDocument.findFirst({
+    const existing = await prisma.clientDocument.findUnique({
       where: {
         id: input.documentId,
         clientId: input.clientId,

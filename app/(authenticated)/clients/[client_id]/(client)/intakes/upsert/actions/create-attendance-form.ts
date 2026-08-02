@@ -59,7 +59,7 @@ export const createAttendanceForm = async (
       }
     }
 
-    const client = await prisma.client.findFirst({
+    const client = await prisma.client.findUnique({
       where: { id: input.clientId, deletedAt: null },
       select: {
         name: true,
