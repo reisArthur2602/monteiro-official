@@ -220,7 +220,7 @@ Estrutura de referência para uma aplicação Next.js única:
 │       ├── redirect-auth.ts
 │       ├── redirect-role.ts
 │       ├── verify-auth.ts
-│       ├── verify-role.ts
+│       ├── has-role.ts
 │       └── token.ts
 └── proxy.ts
 ```
@@ -254,11 +254,12 @@ A pasta `utils/` centraliza helpers e funções utilitárias reutilizáveis em t
 Exemplos:
 
 - `utils/action-result.ts` - Contrato discriminado para respostas de Server Actions
-- `utils/auth/` - Autenticação e autorização (getSession, redirectAuth, verifyAuth, verifyRole, etc.)
+- `utils/auth/` - Autenticação e autorização (getSession, redirectAuth, verifyAuth, hasRole, etc.)
 
 Regras:
 
-- Exports devem estar em `utils/index.ts` para facilitar imports via `@/utils`
+- Prefira imports diretos, como `@/utils/auth/has-role`, em vez de um barrel global obrigatório.
+- Use `index.ts` somente quando ele representar uma API pública pequena e deliberada, sem criar dependências circulares.
 - Não coloque lógica específica de features em `utils/`
 - Evite crescimento desorganizado: só mova para `utils/` quando for reutilizado em múltiplas features
 - Manter `utils/` limpo ajuda a distinguir do `lib/` (bibliotecas externas)
@@ -309,15 +310,59 @@ export default UploadPage
 As pages devem ser pequenas e responsáveis principalmente por:
 
 - composição;
-- autenticação;
 - leitura de `params`;
 - leitura de `searchParams`;
-- carregamento inicial;
+- chamada de queries da feature;
 - definição de metadados, quando necessário.
 
 Não faça uma page inteira virar Client Component apenas porque uma pequena parte da tela precisa de interação.
 
----
+### Proteção de grupos de rotas
+
+Rotas autenticadas devem ficar dentro de um grupo com layout protegido, por exemplo:
+
+```text
+app/
+├── (public)/
+│   └── login/
+│       └── page.tsx
+└── (protected)/
+    ├── layout.tsx
+    ├── page.tsx
+    ├── clients/
+    │   └── page.tsx
+    └── cases/
+        └── page.tsx
+```
+
+O layout compartilhado deve executar `redirectAuth()` uma única vez:
+
+```tsx
+import type { ReactNode } from 'react'
+
+import { redirectAuth } from '@/utils/auth/redirect-auth'
+
+type ProtectedLayoutProps = {
+  children: ReactNode
+}
+
+const ProtectedLayout = async ({ children }: ProtectedLayoutProps) => {
+  const user = await redirectAuth()
+
+  return <>{children}</>
+}
+
+export default ProtectedLayout
+```
+
+Regras:
+
+- Pages filhas de um layout já protegido não devem repetir `redirectAuth()`.
+- Não coloque `redirectAuth()` em toda page por padrão.
+- Use um layout protegido aninhado quando um conjunto inteiro de rotas exigir uma role específica.
+- Uma page só pode chamar `redirectAuth()` diretamente quando estiver fora de um layout protegido ou quando houver uma necessidade arquitetural explícita.
+- A proteção do layout controla navegação e composição da interface, mas não substitui `verifyAuth()` nas queries, Server Actions e Route Handlers.
+- Autorização por recurso deve continuar próxima da consulta ou mutation.
 
 ## 7. Componentização
 
@@ -591,6 +636,374 @@ app/<feature>/feature/
 
 Não mova um componente para `components/shared` até existir reutilização real em mais de uma feature.
 
+---
+
+## 8a. Hierarquia, propriedade e deduplicação de ações
+
+Toda tela deve possuir uma hierarquia de ações definida antes da implementação.
+
+O Claude Code deve identificar cada ação como uma destas categorias:
+
+- **ação primária da página**: principal próximo passo do usuário;
+- **ação secundária da página**: edição, impressão, exportação ou operação complementar;
+- **ação contextual de seção**: afeta somente uma seção ou card;
+- **ação de item**: afeta uma linha, registro ou elemento específico;
+- **ação destrutiva**: desativação, arquivamento ou outra operação de risco.
+
+### Regra de propriedade da ação
+
+Cada ação deve possuir um único local principal de renderização por breakpoint.
+
+Use:
+
+- cabeçalho da página para ações que afetam o recurso ou a página inteira;
+- cabeçalho de uma seção para ações que afetam somente aquela seção;
+- menu de ações do item para ações de uma linha, card ou registro específico;
+- `AlertDialog` para confirmar ações destrutivas;
+- alertas e banners somente para comunicar estado, restrição ou próximo passo excepcional.
+
+Não crie um card chamado “Ações” apenas para repetir botões que já existem no cabeçalho.
+
+### Ações repetidas
+
+É proibido renderizar a mesma ação em múltiplos lugares visíveis da mesma tela.
+
+Considere a ação repetida quando possuir o mesmo:
+
+- destino (`href`);
+- handler;
+- efeito de negócio;
+- diálogo aberto;
+- mutation executada;
+- resultado esperado pelo usuário.
+
+Exemplos proibidos:
+
+- “Editar ficha” no cabeçalho e novamente em um card lateral;
+- “Imprimir” no cabeçalho e novamente na área de ações;
+- “Abrir fichas” em um banner e “Ver fichas finalizadas” no cabeçalho quando ambos levam à mesma tela;
+- botão “Voltar” repetindo uma navegação já fornecida por breadcrumb, tabs ou link principal;
+- botão “Novo” no cabeçalho e novamente no estado vazio sem diferença de contexto.
+
+Antes de adicionar um botão, pesquise a árvore da página e confirme que a ação ainda não existe.
+
+### Página de detalhes
+
+O padrão principal deste projeto é manter ações que afetam a página inteira no cabeçalho.
+
+Sidebars devem priorizar informações, resumo, navegação contextual e conteúdo auxiliar. Não crie um card genérico de ações na sidebar por padrão.
+
+Um painel lateral de ações só pode ser utilizado quando o Design System ou o fluxo funcional exigir explicitamente esse padrão. Nesse caso, remova as mesmas ações do cabeçalho.
+
+Nunca use cabeçalho e painel lateral simultaneamente para as mesmas ações.
+
+Padrão recomendado:
+
+- uma ação primária visível;
+- até duas ações secundárias visíveis;
+- ações adicionais em `DropdownMenu`;
+- ações destrutivas separadas visualmente e confirmadas com `AlertDialog`.
+
+Exemplo:
+
+```text
+Cabeçalho
+├── Abrir processo      ← ação primária
+├── Editar ficha        ← ação secundária
+└── Mais ações
+    ├── Imprimir
+    └── Desativar ficha
+```
+
+Nesse caso, não deve existir outro card lateral repetindo `Editar ficha` e `Imprimir`.
+
+### Alertas e banners
+
+Alertas devem ser informativos por padrão.
+
+Um alerta pode conter uma ação somente quando:
+
+- a ação resolve diretamente o estado descrito;
+- ela não existe em outro local visível;
+- o alerta é o ponto natural do fluxo;
+- remover a ação prejudicaria a compreensão do próximo passo.
+
+Não transforme alertas em uma segunda barra de ações.
+
+### Responsividade
+
+Quando a mesma ação precisar mudar de posição entre desktop e mobile:
+
+- reutilize a mesma definição ou componente de ação;
+- garanta que apenas uma versão esteja visível em cada breakpoint;
+- não crie handlers ou regras de permissão diferentes entre as versões;
+- não deixe duas versões acessíveis simultaneamente.
+
+### Fonte única das ações
+
+Quando uma tela possuir várias ações relacionadas, prefira definir a configuração uma única vez e reutilizá-la na apresentação escolhida.
+
+Não mantenha listas independentes de ações no cabeçalho, sidebar e cards.
+
+### Checklist visual obrigatório
+
+Antes de concluir uma tela, confirme:
+
+- [ ] Existe no máximo uma ação primária visível para a página.
+- [ ] Nenhum botão possui o mesmo destino ou efeito de outro botão visível.
+- [ ] Ações de página não foram repetidas dentro de cards.
+- [ ] Ações de item estão próximas do item correspondente.
+- [ ] Alertas não repetem ações do cabeçalho.
+- [ ] Ações destrutivas usam confirmação.
+- [ ] Desktop e mobile não exibem versões duplicadas simultaneamente.
+- [ ] A hierarquia visual deixa claro qual é o próximo passo principal.
+
+
+## 8b. Revisão crítica de UI/UX e auditoria de controles
+
+Não basta verificar se dois botões possuem o mesmo texto. Antes de implementar uma tela, o Claude Code deve analisar a intenção, o escopo, o modo atual, o destino e o efeito de cada controle visível.
+
+A implementação deve ser crítica em relação ao prompt, aos documentos e ao código existente. Não reproduza automaticamente todas as ações mencionadas ou encontradas em componentes anteriores. Quando duas ações competirem, se repetirem ou criarem ambiguidade, escolha a hierarquia mais clara e registre a decisão.
+
+### Objetivo principal da tela
+
+Antes de criar a interface, identifique:
+
+- qual é o recurso atual;
+- qual é a tarefa principal do usuário;
+- qual é o modo atual da interface;
+- qual é a ação primária;
+- quais ações são realmente necessárias naquele modo;
+- quais controles pertencem ao recurso inteiro e quais pertencem somente a uma seção.
+
+Uma tela não deve acumular ações apenas porque elas são possíveis. Exiba somente as ações úteis para a tarefa e para o estado atual.
+
+### Registro obrigatório de ações
+
+Antes da implementação, crie mentalmente ou documente um registro equivalente a:
+
+```text
+id da ação | intenção | escopo | modos visíveis | local canônico | prioridade | destino ou efeito
+```
+
+Exemplo:
+
+```text
+template.publish        | publicar template  | recurso | editar, prévia | cabeçalho da página | primária   | mutation publishTemplate
+template.settings       | configurar template| recurso | editar, prévia | cabeçalho da página | secundária | dialog template-settings
+editor.insert-variable  | inserir variável   | editor  | editar         | toolbar do editor   | contextual | command insertVariable
+preview.print           | imprimir documento | prévia  | prévia         | toolbar da prévia   | contextual | window.print
+preview.zoom            | alterar zoom       | prévia  | prévia         | toolbar da prévia   | utilitária | estado local de zoom
+```
+
+Regras:
+
+- Cada ação deve possuir um identificador conceitual único.
+- O mesmo identificador não pode ser renderizado em dois locais visíveis no mesmo breakpoint.
+- Ações com textos diferentes, mas com o mesmo destino ou efeito, devem usar o mesmo identificador e ser tratadas como duplicadas.
+- Não crie uma ação sem conseguir definir seu escopo e local canônico.
+- Não crie controles apenas para preencher espaço visual.
+
+### Escopos de interface
+
+Classifique cada controle em um único escopo principal:
+
+1. **Global da aplicação**: tema, conta, navegação global.
+2. **Recurso ou página**: publicar, editar, configurar ou desativar o recurso atual.
+3. **Modo de trabalho**: ações exclusivas de editar, visualizar, revisar ou imprimir.
+4. **Seção ou canvas**: zoom, filtros locais, ordenação, comandos de uma área específica.
+5. **Item**: ações de uma linha, card, documento ou registro individual.
+
+Não misture escopos diferentes na mesma toolbar sem uma justificativa clara.
+
+Exemplos:
+
+- `Publicar template` e `Configurações do template` pertencem ao cabeçalho do recurso.
+- `Inserir variável` pertence ao modo de edição.
+- `Zoom` e `Imprimir` pertencem à prévia.
+- Ações de uma linha pertencem ao menu da própria linha.
+
+### Toolbars com responsabilidade única
+
+Cada barra de controles deve possuir uma responsabilidade clara.
+
+- O cabeçalho da página controla o recurso atual.
+- O seletor de modo alterna entre editar e pré-visualizar.
+- A toolbar do editor contém somente comandos de edição.
+- A toolbar da prévia contém somente comandos de visualização, impressão ou zoom.
+- A sidebar contém informações ou navegação contextual, não uma cópia das ações da página.
+
+Não transforme uma toolbar em um depósito de ações não relacionadas.
+
+### Visibilidade orientada por modo e estado
+
+Ações devem aparecer somente quando forem válidas e úteis no modo atual.
+
+Exemplos:
+
+- Em `Editar`, pode existir `Inserir variável`.
+- Em `Prévia`, não exiba comandos de edição como `Inserir variável`.
+- Em `Prévia`, podem existir `Zoom` e `Imprimir`.
+- Uma ação indisponível pelo estado atual deve ser removida, desabilitada com explicação ou movida para o fluxo apropriado.
+- Não mantenha ações de edição visíveis apenas para permitir que o usuário volte ao modo de edição; o seletor de modo já cumpre essa função.
+
+Ao alternar de modo, revise todas as ações visíveis. Não altere apenas o conteúdo central.
+
+### Duplicidade semântica
+
+Considere duplicidade mesmo quando os textos forem diferentes.
+
+Exemplos de duplicidade semântica:
+
+- `Configurações` e `Ajustar template` abrindo o mesmo diálogo;
+- `Abrir fichas` e `Ver fichas finalizadas` levando à mesma rota;
+- `Editar` e `Alterar dados` iniciando o mesmo fluxo;
+- ícone de engrenagem e botão `Configurações` executando a mesma ação;
+- ação no menu de reticências repetindo um botão já visível sem necessidade responsiva.
+
+A detecção deve comparar:
+
+- `href`;
+- handler;
+- action id;
+- dialog aberto;
+- mutation;
+- alteração de estado;
+- resultado esperado pelo usuário.
+
+### Labels específicos e configurações
+
+Não use múltiplos controles genéricos chamados `Configurações` na mesma tela.
+
+Quando existirem configurações realmente diferentes, use nomes específicos:
+
+- `Configurações do template`;
+- `Configurações da impressão`;
+- `Preferências do editor`;
+- `Configurações da conta`.
+
+Se dois botões chamados `Configurações` abrirem o mesmo fluxo, mantenha apenas o local canônico.
+
+Se abrirem fluxos diferentes, diferencie claramente o nome, o escopo e o local. Não obrigue o usuário a descobrir a diferença clicando.
+
+### Estado não é ação
+
+Informações como:
+
+- `0 variáveis usadas`;
+- `Sem alterações`;
+- `Rascunho`;
+- `Publicado`;
+- `Salvo há 2 minutos`;
+
+são estados, não ações.
+
+Regras:
+
+- Não estilize estados como botões.
+- Posicione o estado próximo do recurso ao qual ele se refere.
+- Não repita o mesmo estado em várias regiões.
+- Oculte estados sem utilidade no modo atual.
+- Use texto compreensível; evite indicadores técnicos que não ajudam a decisão do usuário.
+
+### Orçamento de ações visíveis
+
+Como padrão para páginas de detalhes ou edição:
+
+- mantenha no máximo uma ação primária visível;
+- mantenha até duas ações secundárias visíveis quando forem frequentes;
+- mova ações menos frequentes para `DropdownMenu`;
+- não coloque no menu uma ação que já está visível, salvo quando for uma adaptação responsiva em que apenas uma versão aparece por breakpoint;
+- não crie uma ação secundária sem necessidade documentada no fluxo.
+
+Esses limites são orientação de hierarquia, não autorização para adicionar ações até atingir a quantidade máxima.
+
+### Revisão crítica obrigatória antes de codificar
+
+Antes de implementar a tela, responda:
+
+1. Qual é o objetivo principal desta tela?
+2. Qual é a única ação primária?
+3. Existe mais de uma ação levando ao mesmo resultado?
+4. Existe algum controle no modo errado?
+5. Existe uma toolbar misturando escopos?
+6. Existe um label genérico ou ambíguo?
+7. Existe uma ação criada apenas por convenção, sem requisito funcional?
+8. Alguma ação pode ser removida sem prejudicar o fluxo?
+9. O menu de reticências repete ações visíveis?
+10. O estado atual da tela está claro sem textos redundantes?
+
+Quando houver conflito entre prompt, protótipo, Design System e fluxo funcional, não replique todos os elementos. Preserve a regra de negócio e escolha a solução com menor redundância e maior clareza. Informe o conflito na conclusão.
+
+### Auditoria visual obrigatória após implementar
+
+Depois de implementar uma tela:
+
+1. Renderize a rota real.
+2. Revise ao menos um viewport desktop e um mobile.
+3. Liste todos os botões, links, menus, tabs e controles interativos visíveis.
+4. Compare os destinos, handlers, dialogs e mutations.
+5. Remova duplicidades semânticas.
+6. Confirme que cada ação aparece apenas no modo e escopo corretos.
+7. Confirme que toolbars possuem responsabilidade única.
+8. Verifique se labels genéricos foram diferenciados.
+9. Verifique se ações destrutivas estão separadas e confirmadas.
+10. Capture screenshot ou use teste visual quando a ferramenta estiver disponível.
+
+Não considere a revisão concluída apenas pela leitura do JSX.
+
+Se não for possível executar ou visualizar a interface, declare explicitamente que a auditoria visual não foi realizada. Não afirme que a UI foi validada sem renderizá-la.
+
+### Exemplo de organização para editor de templates
+
+Padrão recomendado:
+
+```text
+Cabeçalho do recurso
+├── status de salvamento
+├── Configurações do template
+├── Publicar
+└── Mais ações
+
+Seletor de modo
+├── Editar
+└── Prévia
+
+Modo Editar
+├── quantidade de variáveis utilizadas, quando útil
+└── Inserir variável
+
+Modo Prévia
+├── Imprimir
+└── Zoom
+```
+
+Não repetir `Configurações` no cabeçalho e na toolbar.
+
+Não exibir `Inserir variável` enquanto `Prévia` estiver ativa.
+
+Não misturar controles de edição com controles de impressão ou zoom.
+
+### Checklist crítico de UI/UX
+
+- [ ] O objetivo principal da tela foi identificado.
+- [ ] Toda ação possui intenção, escopo, modo e local canônico.
+- [ ] Existe no máximo uma ação primária visível.
+- [ ] Não existem duplicidades por texto, destino, handler, diálogo, mutation ou resultado.
+- [ ] Não existem labels diferentes para a mesma ação.
+- [ ] Não existem dois controles genéricos chamados `Configurações`.
+- [ ] Ações de edição aparecem somente no modo de edição.
+- [ ] Ações de prévia aparecem somente no modo de prévia.
+- [ ] Cada toolbar possui uma responsabilidade única.
+- [ ] Estados não estão estilizados ou posicionados como ações.
+- [ ] O menu de reticências não repete ações visíveis.
+- [ ] Nenhuma ação foi adicionada sem requisito funcional.
+- [ ] A tela foi renderizada e auditada visualmente.
+- [ ] Desktop e mobile foram revisados.
+- [ ] Limitações da auditoria foram declaradas.
+
+---
+
 ## 9. Carregamento e estados de erro
 
 Use os recursos do App Router quando forem úteis:
@@ -721,15 +1134,14 @@ Exemplo:
 ```text
 app/
 └── cases/
-        └── queries/
-            ├── list-cases.ts
-            ├── get-case.ts
-            ├── count-cases.ts
-            ├── get-case-summary.ts
-            └── list-case-documents.ts
+    └── queries/
+        ├── list-cases.ts
+        ├── get-case.ts
+        ├── count-cases.ts
+        └── list-case-documents.ts
 ```
 
-Use nomes que expressem uma única responsabilidade:
+Use nomes que expressem o caso de uso:
 
 - `list-cases.ts`;
 - `get-case.ts`;
@@ -750,119 +1162,189 @@ helpers.ts
 
 Regras:
 
-- Uma query por arquivo.
 - Uma responsabilidade principal por query.
+- Uma query pode carregar relações coerentes com o mesmo caso de uso.
+- Não fragmente uma página em várias consultas pequenas apenas para cumprir “uma query por arquivo”.
+- Não crie uma query genérica que misture dados sem relação.
 - Não coloque mutations em `queries`.
 - Não coloque consultas Prisma diretamente em pages, layouts ou componentes React.
 - Pages, layouts e Server Components devem chamar funções exportadas por `queries`.
 - Server Actions podem chamar queries quando precisarem ler dados, mas mutations continuam em `actions`.
 - Não duplique a mesma consulta em vários arquivos.
-- Não crie uma query genérica que busque dados não relacionados apenas para reduzir chamadas.
 - Aplique autenticação e autorização dentro da query quando os dados forem protegidos.
 - Se uma query depender do usuário autenticado, derive o usuário da sessão no servidor.
 - Nunca receba `userId` do cliente como substituto da sessão.
 - Use `select` para buscar somente os campos necessários.
+- Limite relações que possam crescer.
 - Retorne DTOs serializáveis quando o resultado for enviado ao cliente.
 
-Exemplo:
+### Prioridade entre `findUnique()` e `findFirst()`
+
+Ao buscar um único registro, priorize sempre `findUnique()` quando existir uma chave única aplicável.
+
+Use `findUnique()` para:
+
+- campo `@id`;
+- campo `@unique`;
+- restrição composta `@@id`;
+- restrição composta `@@unique`.
+
+Exemplo por ID:
 
 ```ts
-import { cache } from 'react'
-
-import { verifyAuth } from '@/utils/auth/verify-auth'
-import { prisma } from '@/lib/prisma'
-
-type ListCasesInput = {
-  page?: string
-  query?: string
-}
-
-export const listCases = cache(async (input: ListCasesInput) => {
-  const user = await verifyAuth()
-
-  const page = Math.max(Number(input.page ?? 1), 1)
-  const pageSize = 20
-  const query = input.query?.trim()
-
-  const where = {
-    createdById: user.id,
-    ...(query
-      ? {
-          title: {
-            contains: query,
-            mode: 'insensitive' as const,
-          },
-        }
-      : {}),
-  }
-
-  const [cases, total] = await prisma.$transaction([
-    prisma.case.findMany({
-      where,
-      select: {
-        id: true,
-        title: true,
-        status: true,
-        createdAt: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
-    prisma.case.count({
-      where,
-    }),
-  ])
-
-  return {
-    data: cases.map((item) => ({
-      ...item,
-      createdAt: item.createdAt.toISOString(),
-    })),
-    pagination: {
-      page,
-      pageSize,
-      total,
-      pageCount: Math.ceil(total / pageSize),
-    },
-  }
+const user = await prisma.user.findUnique({
+  where: {
+    id: userId,
+  },
 })
 ```
 
+Exemplo com autorização e exclusão lógica:
+
+```ts
+const process = await prisma.process.findUnique({
+  where: {
+    id: processId,
+    createdById: user.id,
+    isActive: true,
+  },
+  select: {
+    id: true,
+    title: true,
+  },
+})
+```
+
+Use `findFirst()` somente quando:
+
+- nenhum campo ou conjunto de campos da consulta for único;
+- a busca utilizar `OR` entre critérios diferentes;
+- a busca depender de filtros relacionais que não garantem unicidade;
+- for necessário retornar o primeiro registro segundo uma ordenação;
+- o critério de negócio ainda não puder ser representado por uma restrição única.
+
+Exemplo válido:
+
+```ts
+const latestMovement = await prisma.processMovement.findFirst({
+  where: {
+    processId,
+    isActive: true,
+  },
+  orderBy: {
+    createdAt: 'desc',
+  },
+})
+```
+
+Regras obrigatórias:
+
+- Não use `findFirst()` para buscar somente por `id`.
+- Não use `findFirst()` para campos declarados como `@unique`.
+- Ao verificar existência por chave única, use `findUnique()` com `select: { id: true }`.
+- Quando uma combinação for única pela regra de negócio, represente essa unicidade no schema.
+- Quando `findFirst()` significar “primeiro”, “último”, “mais recente” ou “mais antigo”, use `orderBy` explícito.
+- Continue aplicando autorização e `isActive: true` mesmo ao usar `findUnique()`.
+
+### Listagens e relações
+
+Toda listagem que possa crescer deve utilizar:
+
+- paginação;
+- `take` com limite máximo;
+- filtros normalizados;
+- ordenação determinística;
+- `select` explícito.
+
+Toda relação potencialmente grande deve possuir limite ou paginação própria.
+
+Não execute queries dentro de loops quando uma consulta em lote puder resolver o caso.
+
+Evite N+1:
+
+```ts
+const clients = await prisma.client.findMany({
+  where: {
+    id: {
+      in: clientIds,
+    },
+    isActive: true,
+  },
+  select: {
+    id: true,
+    name: true,
+  },
+})
+```
+
+### Consultas independentes
+
+Consultas independentes podem ser executadas em paralelo quando uma não depende do resultado da outra.
+
+```ts
+const [cases, total] = await Promise.all([
+  prisma.case.findMany({
+    where,
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      createdAt: true,
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+  }),
+  prisma.case.count({ where }),
+])
+```
+
+Regras:
+
+- Não use `Promise.all()` automaticamente.
+- Não paralelize operações dependentes.
+- Dentro de interactive transactions, execute as operações sequencialmente.
+- Use `$transaction()` quando atomicidade ou consistência transacional forem necessárias, não apenas para agrupar qualquer conjunto de leituras.
+
 ### Uso de `cache()`
 
-Por padrão, envolva queries server-side reutilizáveis com `cache()` do React:
+Use `cache()` do React para deduplicar queries server-side reutilizadas durante a mesma renderização.
 
 ```ts
 import { cache } from 'react'
 
 export const getCase = cache(async (caseId: string) => {
-  // autenticação, autorização e consulta
+  const user = await verifyAuth()
+
+  return prisma.case.findUnique({
+    where: {
+      id: caseId,
+      createdById: user.id,
+      isActive: true,
+    },
+  })
 })
 ```
 
-Use `cache()` para:
-
-- deduplicar chamadas equivalentes durante uma renderização no servidor;
-- permitir que page, layout, metadata e Server Components reutilizem a mesma query;
-- centralizar autenticação e autorização sem repetir consultas idênticas desnecessariamente.
+Use `cache()` quando page, layout, metadata ou múltiplos Server Components puderem chamar a mesma função durante o mesmo render.
 
 Regras importantes:
 
 - Importe `cache` de `react`.
-- Defina a função memoizada no escopo do módulo.
+- Defina a função memoizada uma única vez no escopo do módulo.
+- Todos os consumidores devem importar a mesma função memoizada.
 - Não crie `cache()` dentro de componentes ou dentro de outra função.
-- Passe argumentos simples e estáveis.
-- Quando usar objetos como argumento, evite criar múltiplos objetos equivalentes em pontos diferentes esperando deduplicação automática.
-- `cache()` não deve ser tratado como cache persistente entre usuários ou requisições.
-- Não use `cache()` para compartilhar dados privados entre sessões.
-- A query continua responsável por autenticação e autorização.
-- Mutations não devem ser envolvidas com `cache()`.
-- Após mutations, use a estratégia de revalidação adequada para a interface.
+- Prefira argumentos primitivos e estáveis.
+- Objetos diferentes com o mesmo conteúdo não garantem deduplicação por identidade.
+- `cache()` não é cache persistente entre requisições.
+- Não use `cache()` para compartilhar dados privados entre usuários.
+- Não envolva mutations com `cache()`.
+- Cache não substitui paginação, índices, `select` ou queries eficientes.
+- Após mutations, use a estratégia de revalidação adequada.
 
-Quando a necessidade for cache persistente entre requisições, siga a estratégia de cache definida especificamente para o projeto. Não substitua essa decisão silenciosamente por `cache()`.
+Quando a necessidade for cache persistente entre requisições, defina explicitamente chave, isolamento, duração e invalidação. Não introduza cache persistente silenciosamente.
 
 ## 13. Autenticação
 
@@ -881,7 +1363,7 @@ Nunca:
 - exponha hash de senha;
 - exponha o token ao JavaScript do navegador;
 - coloque dados sensíveis no payload JWT;
-- confie apenas no proxy;
+- confie apenas no proxy ou no layout;
 - retorne mensagens que revelem se um usuário existe.
 
 Estrutura:
@@ -893,7 +1375,7 @@ utils/
     ├── redirect-auth.ts
     ├── redirect-role.ts
     ├── verify-auth.ts
-    ├── verify-role.ts
+    ├── has-role.ts
     └── token.ts
 ```
 
@@ -951,9 +1433,9 @@ Senha incorreta
 
 Considere proteção contra tentativas excessivas de login.
 
----
-
 ## 14. `getSession`
+
+`getSession()` deve ser a única fonte server-side para obter a sessão autenticada atual.
 
 Responsabilidades:
 
@@ -961,39 +1443,97 @@ Responsabilidades:
 - Validar assinatura e expiração do JWT.
 - Extrair o ID do usuário.
 - Buscar o usuário atualizado no banco.
+- Filtrar usuário inativo.
+- Retornar somente os campos necessários.
 - Retornar o usuário ou `null`.
 - Não retornar senha nem hash.
 - Tratar token inválido como sessão inexistente.
 
 Não confie apenas nos dados armazenados no token para obter informações atualizadas do usuário.
 
----
+### Cache obrigatório por renderização
+
+`getSession()` deve ser envolvido uma única vez com `cache()` do React no escopo do módulo:
+
+```ts
+import 'server-only'
+
+import { cache } from 'react'
+import { cookies } from 'next/headers'
+
+import { prisma } from '@/lib/prisma'
+import { verifyToken } from '@/utils/auth/token'
+
+export const getSession = cache(async () => {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('session')?.value
+
+  if (!token) {
+    return null
+  }
+
+  const payload = await verifyToken(token)
+
+  if (!payload?.sub || typeof payload.sub !== 'string') {
+    return null
+  }
+
+  return prisma.user.findUnique({
+    where: {
+      id: payload.sub,
+      isActive: true,
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+    },
+  })
+})
+```
+
+Regras:
+
+- Todos os helpers de autenticação devem importar essa mesma função.
+- Não crie uma versão própria de `getSession()` em cada feature.
+- Não envolva `getSession()` novamente com outro `cache()`.
+- Não crie `cache()` dentro da função.
+- A deduplicação vale para a mesma renderização server-side, não entre usuários ou requisições diferentes.
+- Não aplique cache persistente à sessão, role ou autorização por padrão.
+- Um erro ocorrido na primeira execução pode ser reutilizado durante o mesmo render; cache não corrige indisponibilidade do banco.
 
 ## 15. `redirectAuth`
 
-Use em pages e layouts Server Components.
+Use `redirectAuth()` em layouts de grupos de rotas protegidas.
 
 Responsabilidades:
 
+- Obter a sessão por meio de `getSession()`.
 - Redirecionar usuários deslogados para `/login`.
-- Redirecionar usuários autenticados para a página principal ao acessarem rotas públicas de autenticação.
-- Ser baseada em `getSession`.
+- Retornar o usuário autenticado para composição do layout.
 - Não substituir autorização por recurso.
 - Não ser chamada em Client Components.
 
-Exemplo de uso:
+Exemplo:
 
 ```tsx
 import { redirectAuth } from '@/utils/auth/redirect-auth'
 
-const ProtectedPage = async () => {
+const ProtectedLayout = async ({ children }: { children: React.ReactNode }) => {
   const user = await redirectAuth()
 
-  return <div>{user.name}</div>
+  return <AppShell user={user}>{children}</AppShell>
 }
-
-export default ProtectedPage
 ```
+
+Regras:
+
+- Não chame `redirectAuth()` em toda page filha de um layout já protegido.
+- Não repita a consulta de autenticação apenas por precaução visual.
+- Use um layout aninhado para proteger grupos menores de rotas.
+- Pages públicas de autenticação podem usar uma função específica para redirecionar usuários já autenticados, sem misturar esse comportamento com todas as pages protegidas.
+- Queries, Server Actions e Route Handlers continuam obrigados a usar `verifyAuth()` porque não devem depender da execução prévia do layout.
 
 ## 16. `verifyAuth`
 
@@ -1006,7 +1546,7 @@ Use em:
 
 Responsabilidades:
 
-- Buscar a sessão com `getSession`.
+- Buscar a sessão com `getSession()`.
 - Interromper a operação se o usuário não estiver autenticado.
 - Retornar o usuário autenticado.
 - Não substituir autorização por recurso.
@@ -1018,18 +1558,18 @@ Exemplo:
 const user = await verifyAuth()
 ```
 
+Como `getSession()` é memoizado no escopo do módulo, múltiplas chamadas de `verifyAuth()` durante a mesma renderização devem reutilizar o mesmo resultado de sessão.
+
 ## 17. `redirectRole`
 
-Use em pages e layouts Server Components quando uma rota exigir uma ou mais roles específicas.
-
-Ele cumpre, para roles, o mesmo papel que `redirectAuth` cumpre para autenticação.
+Use em layouts Server Components quando um grupo de rotas exigir uma ou mais roles específicas.
 
 Responsabilidades:
 
-- Validar primeiro se existe uma sessão autenticada.
-- Ler a role atual do usuário no banco por meio da sessão.
+- Chamar `redirectAuth()` para obter o usuário autenticado.
+- Comparar a role usando `hasRole()`.
 - Permitir acesso quando a role estiver na lista autorizada.
-- Redirecionar quando o usuário não possuir permissão.
+- Redirecionar quando o usuário não possuir permissão de acesso à rota.
 - Retornar o usuário autorizado.
 - Não ser usado em Server Actions.
 - Não ser usado em Client Components.
@@ -1041,16 +1581,13 @@ Exemplo:
 import type { Role } from '@prisma/client'
 import { redirect } from 'next/navigation'
 
-import { getSession } from './get-session'
+import { redirectAuth } from './redirect-auth'
+import { hasRole } from './has-role'
 
-export const redirectRole = async (allowedRoles: Role[]) => {
-  const user = await getSession()
+export const redirectRole = async (allowedRoles: readonly Role[]) => {
+  const user = await redirectAuth()
 
-  if (!user) {
-    redirect('/login')
-  }
-
-  if (!allowedRoles.includes(user.role)) {
+  if (!hasRole(user.role, allowedRoles)) {
     redirect('/unauthorized')
   }
 
@@ -1058,109 +1595,89 @@ export const redirectRole = async (allowedRoles: Role[]) => {
 }
 ```
 
-Uso em page:
+Uso recomendado em layout:
 
 ```tsx
 import { Role } from '@prisma/client'
 
 import { redirectRole } from '@/utils/auth/redirect-role'
 
-const UsersPage = async () => {
-  const user = await redirectRole([Role.ADMIN])
+const AdminLayout = async ({ children }: { children: React.ReactNode }) => {
+  await redirectRole([Role.ADMIN])
 
-  return <UsersScreen currentUser={user} />
+  return <>{children}</>
 }
 
-export default UsersPage
+export default AdminLayout
 ```
 
 Regras:
 
-- Receba uma lista de roles permitidas.
+- Prefira proteger um grupo de rotas no layout em vez de repetir `redirectRole()` em cada page.
 - Use o enum de role gerado pelo Prisma ou uma fonte única equivalente.
 - Não compare roles com strings espalhadas pelo projeto.
-- Não use a role recebida por props, formulário, query string ou localStorage como fonte de autorização.
-- O redirecionamento deve apontar para uma rota definida pelo projeto, como `/unauthorized`.
-- Uma Client Component pode ocultar elementos com base na role recebida do servidor, mas isso é apenas comportamento visual.
+- Não use role recebida por props, formulário, query string ou localStorage como fonte de autorização.
+- A Client Component pode ocultar elementos com base na role recebida do servidor, mas isso é apenas comportamento visual.
 - A proteção real deve continuar no servidor.
 
----
+## 18. `hasRole`
 
-## 18. `verifyRole`
+`hasRole()` deve ser uma função pura e síncrona responsável somente por comparar roles.
 
-Use em Server Actions, Route Handlers, queries e funções server-side que exijam roles específicas.
+Ela não deve:
 
-Ele cumpre, para roles, o mesmo papel que `verifyAuth` cumpre para autenticação.
+- acessar cookies;
+- consultar o banco;
+- chamar `getSession()`;
+- chamar `verifyAuth()`;
+- redirecionar;
+- lançar erro de autenticação;
+- receber role ou permissão diretamente do cliente como fonte confiável.
 
-Responsabilidades:
-
-- Validar a sessão.
-- Validar a role do usuário.
-- Interromper a operação quando a role não for permitida.
-- Retornar o usuário autenticado e autorizado.
-- Não redirecionar dentro de Server Actions.
-- Não confiar em verificações feitas pela interface.
-- Não substituir autorização sobre o recurso específico.
-
-Exemplo:
+Implementação:
 
 ```ts
 import type { Role } from '@prisma/client'
 
-import { verifyAuth } from './verify-auth'
-
-export const verifyRole = async (allowedRoles: Role[]) => {
-  const user = await verifyAuth()
-
-  if (!allowedRoles.includes(user.role)) {
-    throw new Error('FORBIDDEN')
-  }
-
-  return user
-}
+export const hasRole = (
+  currentRole: Role,
+  allowedRoles: readonly Role[],
+) => allowedRoles.includes(currentRole)
 ```
 
-Uso em uma action:
+Uso em uma Server Action:
 
 ```ts
 'use server'
 
 import { Role } from '@prisma/client'
 
-import { verifyRole } from '@/utils/auth/verify-role'
+import { verifyAuth } from '@/utils/auth/verify-auth'
+import { hasRole } from '@/utils/auth/has-role'
 
-export const deleteUser = async (userId: string) => {
-  try {
-    const currentUser = await verifyRole([Role.ADMIN])
+export const deactivateUser = async (userId: string) => {
+  const currentUser = await verifyAuth()
 
-    // Validar também se o recurso pode ser alterado.
-    // Exemplo: impedir que o administrador remova a própria conta.
-
-    return {
-      ok: true,
-      message: 'Usuário removido com sucesso',
-      data: null,
-    }
-  } catch (error) {
+  if (!hasRole(currentUser.role, [Role.ADMIN])) {
     return {
       ok: false,
       message: 'Você não possui permissão para realizar esta operação',
     }
   }
+
+  // Validar também propriedade, organização e regras do recurso.
 }
 ```
 
 Regras:
 
-- Receba uma lista de roles permitidas.
-- Use o enum de role central do projeto.
-- Não aceite uma role enviada pelo cliente.
-- Não use apenas verificações visuais da interface.
-- Não revele detalhes desnecessários sobre permissões internas.
-- Diferencie, no código server-side, falha de autenticação e falha de autorização quando isso for necessário.
-- Mesmo após `verifyRole`, valide propriedade, organização, privacidade e demais regras do recurso.
-
----
+- `verifyAuth()` autentica e retorna o usuário.
+- `hasRole()` apenas compara a role já confiável desse usuário.
+- Mesmo após `hasRole()`, valide propriedade, organização, privacidade e demais regras do recurso.
+- Não use `hasRole()` como substituto de autorização por recurso.
+- Não crie um helper chamado `hasPermission()` enquanto o projeto possuir apenas comparação de roles.
+- Use `hasPermission()` somente quando existir uma matriz real de permissões, como `users:create`, `cases:update` ou `documents:read`.
+- Quando um sistema de permissões for criado, a permissão deve ser derivada da role ou de regras server-side, nunca enviada pelo cliente como fonte de verdade.
 
 ## 19. Autorização
 
@@ -1187,10 +1704,11 @@ Exemplo correto:
 ```ts
 const user = await verifyAuth()
 
-const process = await prisma.process.findFirst({
+const process = await prisma.process.findUnique({
   where: {
     id: input.id,
     createdById: user.id,
+    isActive: true,
   },
 })
 
@@ -1504,6 +2022,14 @@ lib/prisma.ts
 
 Evite criar uma nova instância do Prisma Client em cada arquivo.
 
+Regras:
+
+- Exporte uma única instância compartilhada de `PrismaClient` por processo.
+- Em desenvolvimento, preserve a instância durante hot reload.
+- Quando usar `@prisma/adapter-pg`, centralize também o `pg.Pool` em `lib/prisma.ts`.
+- Não crie `Client`, `Pool`, adapter ou `PrismaClient` dentro de queries, actions ou componentes.
+- Não use `client.query()` diretamente em paralelo sobre a mesma conexão.
+
 Use `select` para buscar somente os campos necessários quando apropriado.
 
 Evite retornar modelos completos para o cliente quando apenas poucos campos forem usados.
@@ -1666,6 +2192,8 @@ Regras:
 - Não compartilhe acidentalmente dados privados entre sessões.
 - Não envolva Server Actions de mutation com `cache()`.
 - Não use uma solução de cache persistente sem que ela esteja definida como padrão do projeto.
+- `getSession()` deve ser memoizado uma única vez no escopo do módulo e reutilizado por `redirectAuth()`, `verifyAuth()` e `redirectRole()`.
+- Não aplique cache persistente a sessão, roles ou dados usados para autorizar operações.
 
 Exemplo:
 
@@ -1835,62 +2363,195 @@ const onSubmit = (values: CreateUploadInput) => {
 
 ---
 
-## 35. Exclusões
+## 35. Exclusões, desativação e restauração
 
-Toda exclusão deve:
+Neste projeto, “excluir” significa ocultar ou desativar logicamente o registro.
+
+A aplicação não deve oferecer exclusão física de dados de domínio.
+
+Toda operação de desativação deve:
 
 - validar autenticação;
-- validar autorização;
+- validar role quando aplicável;
+- validar autorização sobre o recurso;
 - confirmar a intenção na interface quando houver risco relevante;
-- verificar dependências;
-- tratar arquivos relacionados;
-- impedir exclusão parcial;
-- retornar mensagem clara.
+- verificar dependências e efeitos relacionados;
+- preservar relacionamentos e histórico;
+- registrar quem realizou a operação quando aplicável;
+- permitir restauração quando a regra de negócio permitir;
+- retornar mensagem clara sem revelar detalhes internos.
 
-Use exclusão lógica quando houver exigência de histórico ou auditoria.
+Na interface, prefira verbos que representem o efeito real:
 
-Não implemente exclusão em cascata sem avaliar seus efeitos.
+- `Desativar`;
+- `Arquivar`;
+- `Ocultar`;
+- `Remover da visualização`.
 
----
+Evite “Excluir definitivamente”, pois essa operação não deve existir no fluxo comum da aplicação.
 
+Ações destrutivas devem usar `AlertDialog` e explicar que o registro será ocultado, não apagado fisicamente.
 
 ## 36. Exclusão lógica (Soft Delete)
 
-Neste projeto, os dados nunca devem ser removidos fisicamente como comportamento padrão.
+Os dados nunca devem ser removidos fisicamente pelo código da aplicação.
 
-Toda exclusão deve ser implementada através de uma flag de atividade.
+### Campos padrão
 
-Estratégia padrão:
+Todo modelo de domínio que possa ser desativado deve possuir, no mínimo:
 
 ```prisma
 isActive Boolean @default(true)
 ```
 
-Regras:
+Para registros que exigem auditoria, use também:
 
-- Nunca utilize `delete()` ou `deleteMany()` por padrão.
-- Toda exclusão deve ser um `update()` alterando `isActive` para `false`.
-- Todas as queries devem filtrar `isActive: true` por padrão.
-- Consultas de registros inativos devem ser explícitas.
-- Sempre que possível, registros ocultos devem poder ser restaurados.
-- Nunca quebre relacionamentos por causa de uma ocultação.
+```prisma
+deletedAt   DateTime?
+deletedById String?
+```
 
-Exemplo:
+Os nomes podem ser adaptados ao domínio, mas a estratégia deve permanecer consistente.
+
+### Operação de desativação
+
+Toda exclusão deve ser uma mutation de atualização:
 
 ```ts
-await prisma.case.update({
-  where: { id },
-  data: { isActive: false },
+const user = await verifyAuth()
+
+const process = await prisma.process.update({
+  where: {
+    id: processId,
+    createdById: user.id,
+    isActive: true,
+  },
+  data: {
+    isActive: false,
+    deletedAt: new Date(),
+    deletedById: user.id,
+  },
+  select: {
+    id: true,
+  },
 })
 ```
 
-Query padrão:
+Quando o modelo possuir apenas `isActive`, a mutation deve alterar esse campo para `false`.
+
+### Operação de restauração
+
+Quando a restauração for permitida:
+
+```ts
+await prisma.process.update({
+  where: {
+    id: processId,
+    isActive: false,
+  },
+  data: {
+    isActive: true,
+    deletedAt: null,
+    deletedById: null,
+  },
+})
+```
+
+### Proibições obrigatórias
+
+Não use no código da aplicação:
+
+- `prisma.<model>.delete()`;
+- `prisma.<model>.deleteMany()`;
+- `tx.<model>.delete()`;
+- `tx.<model>.deleteMany()`;
+- nested writes com `delete` ou `deleteMany`;
+- SQL `DELETE` para dados de domínio;
+- `onDelete: Cascade` como padrão;
+- remoção física de arquivos imediatamente após desativar o registro.
+
+Relacionamentos devem usar comportamento restritivo por padrão. Qualquer exceção exige solicitação explícita, análise de impacto e documentação.
+
+Migrations não devem introduzir `DROP TABLE`, `DROP COLUMN`, truncamento ou remoção destrutiva de dados sem solicitação explícita, backup e plano de migração.
+
+### Filtros obrigatórios
+
+Todas as consultas comuns devem filtrar registros ativos:
 
 ```ts
 const cases = await prisma.case.findMany({
-  where: { isActive: true },
+  where: {
+    isActive: true,
+  },
 })
 ```
+
+O filtro também se aplica a:
+
+- `findUnique()` e `findFirst()`;
+- `count()`;
+- verificações de existência;
+- relações aninhadas;
+- selects de documentos, movimentações, prazos e fichas;
+- consultas usadas por autenticação e autorização;
+- relatórios e exportações comuns.
+
+Exemplo com relação:
+
+```ts
+const process = await prisma.process.findUnique({
+  where: {
+    id: processId,
+    isActive: true,
+  },
+  select: {
+    id: true,
+    movements: {
+      where: {
+        isActive: true,
+      },
+      select: {
+        id: true,
+        title: true,
+      },
+    },
+  },
+})
+```
+
+Consultas de registros inativos devem ser explícitas e possuir finalidade clara, como administração, auditoria ou restauração.
+
+### Unicidade e registros inativos
+
+Ao criar constraints únicas, defina conscientemente se um valor pertencente a um registro inativo pode ou não ser reutilizado.
+
+Não remova uma constraint única nem altere o schema silenciosamente apenas para permitir duplicação após soft delete.
+
+### Arquivos
+
+Ao desativar um documento:
+
+- preserve seus metadados;
+- preserve o vínculo com o registro original;
+- não apague o arquivo físico pelo fluxo comum;
+- impeça seu acesso nas consultas normais;
+- mantenha possibilidade de restauração quando aplicável.
+
+### Garantia automatizada
+
+O CI deve possuir uma verificação que falhe ao encontrar uso não autorizado de:
+
+```text
+.delete(
+.deleteMany(
+delete:
+deleteMany:
+DELETE FROM
+```
+
+A verificação automatizada não substitui revisão, mas impede que hard deletes óbvios sejam adicionados silenciosamente.
+
+Qualquer falso positivo deve ser tratado explicitamente. Não desative a verificação global apenas para liberar o build.
 
 ## 37. Datas
 
@@ -1989,6 +2650,9 @@ Antes de concluir qualquer implementação, confirme:
 - [ ] Componentes visuais próprios foram criados somente como último recurso.
 - [ ] Componentes compartilhados estão em `components/shared`.
 - [ ] Não foram criadas abstrações ou pastas sem necessidade.
+- [ ] Existe no máximo uma ação primária visível por página.
+- [ ] Não existem ações repetidas no cabeçalho, cards, sidebar, alertas ou estados vazios.
+- [ ] Ações de página, seção e item estão nos locais corretos.
 
 ### Dados e componentes
 
@@ -1999,7 +2663,12 @@ Antes de concluir qualquer implementação, confirme:
 - [ ] Não foi introduzido TanStack Table sem solicitação explícita.
 - [ ] Paginação server-side foi utilizada quando a quantidade de dados pode crescer.
 - [ ] Todas as queries Prisma de leitura estão em arquivos separados dentro de `queries`.
-- [ ] Queries reutilizáveis usam `cache()` do React.
+- [ ] `findUnique()` foi priorizado quando existe chave única.
+- [ ] `findFirst()` possui justificativa e `orderBy` quando representa primeiro ou último registro.
+- [ ] Não existem queries dentro de loops nem N+1 conhecido.
+- [ ] Relações potencialmente grandes possuem limite.
+- [ ] Queries reutilizáveis usam `cache()` do React quando há reutilização no mesmo render.
+- [ ] `getSession()` usa uma única função memoizada no escopo do módulo.
 
 ### Formulários e validação
 
@@ -2025,11 +2694,14 @@ Antes de concluir qualquer implementação, confirme:
 
 ### Segurança
 
-- [ ] Rotas protegidas usam `redirectAuth` ou `verifyAuth`.
+- [ ] O grupo de rotas protegidas usa `redirectAuth()` no layout compartilhado.
+- [ ] Pages filhas não repetem `redirectAuth()` sem necessidade explícita.
+- [ ] Toda query, Server Action e Route Handler protegido usa `verifyAuth()`.
 - [ ] Toda mutation protegida valida autenticação.
 - [ ] Toda operação por recurso valida autorização.
-- [ ] Rotas restritas por role usam `redirectRole` quando aplicável.
-- [ ] Actions, Route Handlers e queries restritas por role usam `verifyRole` quando aplicável.
+- [ ] Grupos restritos por role usam `redirectRole()` no layout quando aplicável.
+- [ ] Actions, Route Handlers e queries restritas por role usam `verifyAuth()` e `hasRole()`.
+- [ ] `hasRole()` apenas compara roles e não acessa sessão ou banco.
 - [ ] A role usada para autorização vem da sessão e do banco, nunca do cliente.
 - [ ] O cookie de autenticação é HTTP-only.
 - [ ] O cookie usa configurações seguras.
@@ -2044,7 +2716,12 @@ Antes de concluir qualquer implementação, confirme:
 ### Banco e consistência
 
 - [ ] Operações relacionadas usam transação quando necessário.
-- [ ] Exclusões verificam dependências.
+- [ ] Desativações verificam dependências.
+- [ ] Não existe uso de `delete()`, `deleteMany()`, nested delete ou SQL `DELETE` no código da aplicação.
+- [ ] Models desativáveis possuem a estratégia de soft delete definida.
+- [ ] Queries, counts e relações filtram `isActive: true` por padrão.
+- [ ] A restauração foi considerada quando aplicável.
+- [ ] Não existe cascade destrutivo não autorizado.
 - [ ] Não existem gravações parciais que possam deixar dados inconsistentes.
 - [ ] Consultas selecionam somente os campos necessários quando apropriado.
 
@@ -2088,29 +2765,56 @@ Ao criar ou alterar código neste projeto:
 12. Use obrigatoriamente `Field` do shadcn/ui em todos os campos de formulário.
 13. Use `FieldLabel`, `FieldDescription` e `FieldError` quando aplicáveis.
 14. Não use placeholder como substituto de label.
-15. Não crie tipos redundantes.
-16. Não crie componentes de UI duplicados.
-17. Não crie abstrações antecipadas.
-18. Não introduza TanStack Table sem solicitação explícita.
-19. Não crie automaticamente arquivos `data`, `table` e `columns`.
-20. Não coloque várias actions no mesmo arquivo.
-21. Não coloque várias queries sem relação no mesmo arquivo.
-22. Coloque toda consulta de leitura em um arquivo separado dentro de `queries`.
-23. Use nomes explícitos como `list-cases.ts`, `get-case.ts` e `count-cases.ts`.
-24. Envolva queries server-side reutilizáveis com `cache()` do React.
-25. Não faça consultas Prisma diretamente em pages, layouts ou componentes React.
-26. Não faça consultas ao banco em Client Components.
-27. Não confie no proxy como única proteção.
-28. Não implemente apenas autenticação quando também for necessária autorização.
-29. Use `redirectRole` em pages e layouts restritos por role.
-30. Use `verifyRole` em actions, Route Handlers e queries restritas por role.
-31. Nunca aceite role, `userId` ou permissões do cliente como fonte de autorização.
-32. Não retorne modelos completos do Prisma ao cliente sem necessidade.
-33. Não carregue todos os registros quando a listagem puder crescer.
-34. Não exponha mensagens internas, tokens, senhas ou dados sensíveis.
-35. Não finalize uma implementação que viole este documento.
-36. Execute as verificações disponíveis antes de concluir.
-37. Informe claramente qualquer limitação, conflito ou regra não atendida.
+15. Antes de criar ações, faça um inventário de ação primária, secundárias, contextuais e de item.
+16. Não repita a mesma ação no cabeçalho, sidebar, cards, alertas ou estados vazios.
+17. Não crie card “Ações” quando ele apenas repetir botões já existentes.
+18. Mantenha no máximo uma ação primária visível por página.
+19. Analise duplicidades semânticas, não apenas botões com o mesmo texto.
+20. Defina um identificador conceitual, escopo, modo e local canônico para cada ação.
+21. Não misture ações de recurso, edição, prévia e item na mesma toolbar.
+22. Exiba ações somente no modo em que são válidas e úteis.
+23. Não use múltiplos controles genéricos chamados `Configurações`; diferencie o escopo ou mantenha apenas um.
+24. Renderize e audite visualmente a tela em desktop e mobile antes de considerá-la concluída.
+25. Não afirme que a UI foi validada quando a rota não foi renderizada ou inspecionada visualmente.
+26. Não crie tipos redundantes.
+27. Não crie componentes de UI duplicados.
+28. Não crie abstrações antecipadas.
+29. Não introduza TanStack Table sem solicitação explícita.
+30. Não crie automaticamente arquivos `data`, `table` e `columns`.
+31. Não coloque várias actions no mesmo arquivo.
+32. Não coloque várias queries sem relação no mesmo arquivo.
+33. Coloque toda consulta de leitura em um arquivo separado dentro de `queries`.
+34. Não fragmente um caso de uso coeso em várias queries pequenas sem benefício.
+35. Use nomes explícitos como `list-cases.ts`, `get-case.ts` e `count-cases.ts`.
+36. Priorize `findUnique()` para `@id`, `@unique`, `@@id` e `@@unique`.
+37. Use `findFirst()` somente quando não houver chave única aplicável ou quando a ordenação definir o primeiro registro.
+38. Não faça queries dentro de loops e evite N+1.
+39. Envolva queries server-side reutilizáveis com `cache()` do React quando houver reutilização no mesmo render.
+40. Mantenha `getSession()` memoizado uma única vez no escopo do módulo.
+41. Não faça consultas Prisma diretamente em pages, layouts ou componentes React.
+42. Não faça consultas ao banco em Client Components.
+43. Use `redirectAuth()` no layout compartilhado das rotas protegidas.
+44. Não repita `redirectAuth()` em toda page filha.
+45. Use `verifyAuth()` em queries, Server Actions e Route Handlers protegidos.
+46. Use `redirectRole()` em layouts de grupos restritos por role.
+47. Use `hasRole()` somente para comparar a role confiável retornada pelo servidor.
+48. Não faça `hasRole()` acessar cookie, sessão ou banco.
+49. Não chame comparação de role de `hasPermission()` sem existir uma matriz real de permissões.
+50. Não confie no proxy ou no layout como única proteção.
+51. Não implemente apenas autenticação quando também for necessária autorização.
+52. Nunca aceite role, `userId` ou permissões do cliente como fonte de autorização.
+53. Não use `delete()`, `deleteMany()`, nested delete ou SQL `DELETE` para dados de domínio.
+54. Toda exclusão funcional deve ser soft delete.
+55. Filtre `isActive: true` em queries, counts e relações por padrão.
+56. Não introduza `onDelete: Cascade` sem autorização explícita e análise de impacto.
+57. Não remova fisicamente arquivos no fluxo comum de desativação.
+58. Não retorne modelos completos do Prisma ao cliente sem necessidade.
+59. Não carregue todos os registros quando a listagem puder crescer.
+60. Não exponha mensagens internas, tokens, senhas ou dados sensíveis.
+61. Não finalize uma implementação que viole este documento.
+62. Execute as verificações disponíveis antes de concluir.
+63. Informe claramente qualquer limitação, conflito, warning ou regra não atendida.
+
 ## 44. Critério final
 
 Uma implementação só pode ser considerada concluída quando:
@@ -2122,6 +2826,11 @@ Uma implementação só pode ser considerada concluída quando:
 - não expõe dados sensíveis;
 - possui validação server-side;
 - mantém consistência no banco;
+- não possui ações visuais repetidas ou semanticamente equivalentes;
+- exibe cada ação somente no modo e escopo corretos;
+- possui toolbars com responsabilidade clara;
+- teve a interface renderizada e auditada visualmente, ou declara explicitamente essa limitação;
+- não possui hard delete no código da aplicação;
 - trata loading e erro;
 - passa nas verificações do projeto;
 - não viola este documento.
