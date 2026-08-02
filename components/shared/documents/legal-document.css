@@ -210,6 +210,29 @@
     box-shadow: none;
   }
 
+  /*
+   * `LegalDocumentPaginatedFrame` empilha N folhas dentro de
+   * `[data-paginated-document-root]`. A regra acima foi escrita para uma
+   * folha só — com várias, `position: absolute; top: 0` em cada uma
+   * imprimiria todas sobrepostas na mesma posição. Aqui a raiz assume o
+   * posicionamento absoluto no lugar das folhas, que voltam ao fluxo normal
+   * e cada uma vira sua própria página impressa via `break-after`.
+   */
+  [data-paginated-document-root] {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
+  [data-paginated-document-root] .legal-document__page {
+    position: static;
+    break-after: page;
+  }
+
+  [data-paginated-document-root] .legal-document__page:last-child {
+    break-after: auto;
+  }
+
   .legal-document [data-page-break] {
     height: 0;
     margin: 0;

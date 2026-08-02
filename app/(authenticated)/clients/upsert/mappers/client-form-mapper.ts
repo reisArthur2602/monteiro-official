@@ -27,6 +27,9 @@ export const createEmptyClientFormValues = (): ClientFormInput => ({
   displayName: "",
   document: "",
   birthDate: "",
+  profession: "",
+  nationality: "",
+  rgNumber: "",
   stateRegistration: "",
   municipalRegistration: "",
   email: "",
@@ -44,6 +47,9 @@ type ClientRecord = {
   type: ClientType;
   status: ClientStatus;
   birthDate: Date | null;
+  profession: string | null;
+  nationality: string | null;
+  rgNumber: string | null;
   stateRegistration: string | null;
   municipalRegistration: string | null;
   email: string | null;
@@ -79,6 +85,9 @@ export const mapClientToFormValues = (
   birthDate: client.birthDate
     ? client.birthDate.toISOString().slice(0, 10)
     : "",
+  profession: client.profession ?? "",
+  nationality: client.nationality ?? "",
+  rgNumber: client.rgNumber ?? "",
   stateRegistration: client.stateRegistration ?? "",
   municipalRegistration: client.municipalRegistration ?? "",
   email: client.email ?? "",

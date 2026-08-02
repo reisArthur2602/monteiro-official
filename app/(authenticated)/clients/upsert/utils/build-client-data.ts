@@ -24,6 +24,9 @@ export const buildClientScalarData = (values: ClientFormValues) => {
     responsibleId: values.responsibleId,
     birthDate:
       isNaturalPerson && values.birthDate ? new Date(values.birthDate) : null,
+    profession: isNaturalPerson ? (values.profession ?? null) : null,
+    nationality: isNaturalPerson ? (values.nationality ?? null) : null,
+    rgNumber: isNaturalPerson ? (values.rgNumber ?? null) : null,
     stateRegistration: isNaturalPerson
       ? null
       : (values.stateRegistration ?? null),

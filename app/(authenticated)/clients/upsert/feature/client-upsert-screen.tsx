@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { FormProvider, useForm } from "react-hook-form";
+import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 
 import { ClientStatus } from "@/app/generated/prisma/enums";
@@ -21,7 +21,7 @@ import {
 } from "../schemas/client-form-schema";
 import { ClientAddressPanel } from "./client-address-panel";
 import { ClientContactPanel } from "./client-contact-panel";
-import { ClientFormActions } from "./client-form-actions";
+import { ClientDeactivateMenu } from "./client-deactivate-menu";
 import { ClientIdentificationPanel } from "./client-identification-panel";
 import { ClientMobileActions } from "./client-mobile-actions";
 import { ClientNotesPanel } from "./client-notes-panel";
@@ -53,6 +53,12 @@ export const ClientUpsertScreen = ({
     mode: "onBlur",
     reValidateMode: "onChange",
   });
+
+  // `form` já é o valor de retorno de `useForm`, não algo consumido via
+  // `useFormContext` — por isso `status` pode ser lido aqui em cima, antes
+  // do `FormProvider`, sem precisar mover o cabeçalho para dentro dele.
+  const status = useWatch({ control: form.control, name: "status" });
+  const isInactive = status === ClientStatus.INATIVO;
 
   const handleSubmit = async (values: ClientFormValues) => {
     setIsPending(true);
@@ -113,7 +119,7 @@ export const ClientUpsertScreen = ({
           </p>
         </div>
 
-        <div className="hidden flex-wrap justify-end gap-2 sm:flex">
+        <div className="hidden flex-wrap items-center justify-end gap-2 sm:flex">
           <Button asChild variant="outline">
             <Link href={CLIENTS_PATH}>Cancelar</Link>
           </Button>
@@ -125,6 +131,14 @@ export const ClientUpsertScreen = ({
                 ? "Salvar alterações"
                 : "Salvar cliente"}
           </Button>
+
+          {mode === "edit" ? (
+            <ClientDeactivateMenu
+              isInactive={isInactive}
+              isPending={isPending}
+              onDeactivate={handleDeactivate}
+            />
+          ) : null}
         </div>
       </header>
 
@@ -142,20 +156,19 @@ export const ClientUpsertScreen = ({
             <ClientNotesPanel />
           </div>
 
-          <aside className="grid gap-4 sm:grid-cols-2 lg:sticky lg:top-20 lg:grid-cols-1">
+          <aside className="grid gap-4 lg:sticky lg:top-20">
             <ClientSummaryCard users={users} />
-
-            <ClientFormActions
-              formId={FORM_ID}
-              mode={mode}
-              isPending={isPending}
-              onDeactivate={handleDeactivate}
-            />
           </aside>
         </form>
       </FormProvider>
 
-      <ClientMobileActions formId={FORM_ID} mode={mode} isPending={isPending} />
+      <ClientMobileActions
+        formId={FORM_ID}
+        mode={mode}
+        isPending={isPending}
+        isInactive={isInactive}
+        onDeactivate={handleDeactivate}
+      />
     </div>
   );
 };

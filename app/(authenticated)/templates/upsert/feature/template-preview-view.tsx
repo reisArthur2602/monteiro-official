@@ -1,10 +1,10 @@
 "use client";
 
-import { Printer } from "lucide-react";
+import { Minus, Plus, Printer } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
-import { LegalDocumentFrame } from "@/components/shared/documents/legal-document-frame";
+import { LegalDocumentPaginatedFrame } from "@/components/shared/documents/legal-document-paginated-frame";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 
@@ -14,6 +14,9 @@ import { resolveDocumentVariables } from "../utils/resolve-document-variables";
 import { useTemplateUpsert } from "./template-form-provider";
 
 const PREVIEW_DEBOUNCE_MS = 250;
+const MIN_ZOOM = 30;
+const MAX_ZOOM = 100;
+const ZOOM_STEP = 10;
 
 type TemplatePreviewViewProps = {
   zoom: number;
@@ -37,10 +40,10 @@ export const TemplatePreviewView = ({
 
   useEffect(() => {
     // Sempre resolvido, mesmo com a aba Prévia fechada: a impressão via
-    // Ctrl+P do navegador não passa pelo clique no botão "Imprimir" e
-    // pode acontecer com a aba Editar em foco. O cálculo é barato (troca
-    // de texto em HTML já pronto), então manter isto fora de um gate por
-    // aba é o que garante que o PDF nunca saia vazio ou desatualizado.
+    // Ctrl+P do navegador não passa pelo botão "Imprimir" da prévia e pode
+    // acontecer com a aba Editar em foco. O cálculo é barato (troca de
+    // texto em HTML já pronto), então manter isto fora de um gate por aba
+    // é o que garante que o PDF nunca saia vazio ou desatualizado.
     const timeout = setTimeout(() => {
       setResolvedHtml(
         resolveDocumentVariables(
@@ -52,6 +55,9 @@ export const TemplatePreviewView = ({
 
     return () => clearTimeout(timeout);
   }, [contentHtml]);
+
+  const zoomOut = () => onZoomChange(Math.max(MIN_ZOOM, zoom - ZOOM_STEP));
+  const zoomIn = () => onZoomChange(Math.min(MAX_ZOOM, zoom + ZOOM_STEP));
 
   return (
     <section className="grid grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-xl border bg-card shadow-sm">
@@ -66,47 +72,69 @@ export const TemplatePreviewView = ({
           Imprimir
         </Button>
 
-        <div className="flex items-center gap-3">
-          <label
-            htmlFor="preview-zoom"
-            className="font-mono text-[10px] text-muted-foreground"
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Diminuir zoom"
+            disabled={zoom <= MIN_ZOOM}
+            onClick={zoomOut}
           >
-            Zoom
-          </label>
+            <Minus aria-hidden="true" />
+          </Button>
 
           <Slider
             id="preview-zoom"
-            className="w-28 sm:w-40"
-            min={30}
-            max={100}
+            aria-label="Zoom da prévia"
+            className="w-24 sm:w-36"
+            min={MIN_ZOOM}
+            max={MAX_ZOOM}
             step={5}
             value={[zoom]}
             onValueChange={([value]) => onZoomChange(value ?? zoom)}
           />
 
-          <span className="w-10 font-mono text-[10px] text-muted-foreground">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Aumentar zoom"
+            disabled={zoom >= MAX_ZOOM}
+            onClick={zoomIn}
+          >
+            <Plus aria-hidden="true" />
+          </Button>
+
+          {/*
+            100% aqui corresponde ao tamanho físico real da folha A4 na
+            tela: a paginação mede em milímetros convertidos por uma razão
+            fixa (96px = 25.4mm), não em pixels do dispositivo.
+          */}
+          <button
+            type="button"
+            title="Redefinir para 100%"
+            disabled={zoom === MAX_ZOOM}
+            onClick={() => onZoomChange(MAX_ZOOM)}
+            className="w-10 rounded font-mono text-[10px] text-muted-foreground hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+          >
             {zoom}%
-          </span>
+          </button>
         </div>
       </div>
 
-      <div className="min-h-0 overflow-auto bg-neutral-200 p-3 dark:bg-neutral-800">
-        {/* O zoom é puramente visual: a folha mantém as medidas reais de
-            A4, para que a impressão e o futuro PDF não sejam afetados.
-            `data-print-scale-reset` é o gancho que zera esta transformação
-            na impressão. */}
+      <div className="min-h-0 overflow-auto bg-neutral-200 p-6 dark:bg-neutral-800">
         <div
           data-print-scale-reset
           className="origin-top transition-transform"
           style={{ transform: `scale(${zoom / 100})` }}
         >
-          <LegalDocumentFrame
+          <LegalDocumentPaginatedFrame
             office={office}
             page={page}
             signatures={signatures ?? []}
             html={resolvedHtml}
             variableValues={templateVariableSampleValues}
-            className="mx-auto"
           />
         </div>
       </div>

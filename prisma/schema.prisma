@@ -210,7 +210,10 @@ model Client {
   /**
    * Campos específicos de pessoa física.
    */
-  birthDate DateTime? @map("birth_date") @db.Date
+  birthDate   DateTime? @map("birth_date") @db.Date
+  profession  String?   @db.VarChar(120)
+  nationality String?   @db.VarChar(60)
+  rgNumber    String?   @map("rg_number") @db.VarChar(20)
 
   /**
    * Campos específicos de pessoa jurídica.

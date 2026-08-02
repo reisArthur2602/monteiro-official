@@ -1,8 +1,11 @@
 import "dotenv/config";
 
 import { PrismaPg } from "@prisma/adapter-pg";
+import { generateHTML } from "@tiptap/html/server";
 import { hash } from "bcryptjs";
 
+import { legalEditorExtensions } from "../app/(authenticated)/templates/upsert/editor/legal-editor-extensions";
+import { defaultPageSettings } from "../app/(authenticated)/templates/upsert/mappers/template-form-mapper";
 import { PrismaClient } from "../app/generated/prisma/client";
 import {
   AttendanceChannel,
@@ -14,6 +17,15 @@ import {
   TemplateStatus,
   UserRole,
 } from "../app/generated/prisma/enums";
+
+/** Documento TipTap mínimo: um parágrafo por string, sem marcas nem variáveis. */
+const buildSeedDocument = (paragraphs: string[]) => ({
+  type: "doc",
+  content: paragraphs.map((text) => ({
+    type: "paragraph",
+    content: [{ type: "text", text }],
+  })),
+});
 
 const DEFAULT_PASSWORD = "monteiro123";
 const SALT_ROUNDS = 10;
@@ -64,6 +76,10 @@ const seedTemplates = [
     category: TemplateCategory.CONTRATO,
     legalArea: "Geral",
     status: TemplateStatus.ATIVO,
+    content: [
+      "As partes abaixo identificadas ajustam o presente contrato de prestação de serviços advocatícios, regido pelas cláusulas a seguir.",
+      "O escritório contratado se compromete a patrocinar os interesses do contratante nos termos do mandato outorgado, mediante o pagamento dos honorários ora pactuados.",
+    ],
   },
   {
     name: "Petição Inicial (Cível)",
@@ -72,6 +88,10 @@ const seedTemplates = [
     category: TemplateCategory.PETICAO,
     legalArea: "Cível",
     status: TemplateStatus.ATIVO,
+    content: [
+      "Excelentíssimo Senhor Doutor Juiz de Direito da Vara Cível, o autor, por meio de seu advogado que esta subscreve, vem respeitosamente à presença de Vossa Excelência propor a presente ação, pelos fatos e fundamentos a seguir expostos.",
+      "Requer-se a citação da parte ré para, querendo, apresentar defesa no prazo legal, sob pena de revelia, e, ao final, a procedência dos pedidos formulados.",
+    ],
   },
   {
     name: "Procuração Judicial",
@@ -79,6 +99,10 @@ const seedTemplates = [
     category: TemplateCategory.PROCURACAO,
     legalArea: "Geral",
     status: TemplateStatus.ATIVO,
+    content: [
+      "Pelo presente instrumento particular de mandato, o outorgante nomeia e constitui seu bastante procurador o advogado abaixo identificado, a quem confere amplos poderes para o foro em geral.",
+      "O mandato inclui poderes para propor e contestar ações, substabelecer com ou sem reserva de poderes, e praticar todos os atos necessários à defesa dos interesses do outorgante em juízo ou fora dele.",
+    ],
   },
   {
     name: "Notificação de Inadimplência",
@@ -87,6 +111,10 @@ const seedTemplates = [
     category: TemplateCategory.NOTIFICACAO,
     legalArea: "Trabalhista",
     status: TemplateStatus.ATIVO,
+    content: [
+      "Vimos, por meio desta, notificar Vossa Senhoria acerca do inadimplemento da obrigação pactuada, concedendo-lhe o prazo de 5 (cinco) dias úteis para a devida regularização.",
+      "Decorrido o prazo sem a devida quitação, adotaremos as medidas judiciais cabíveis para a satisfação do crédito, sem prejuízo dos encargos moratórios já incidentes.",
+    ],
   },
   {
     name: "Parecer Jurídico",
@@ -94,6 +122,10 @@ const seedTemplates = [
     category: TemplateCategory.OUTRO,
     legalArea: "Geral",
     status: TemplateStatus.RASCUNHO,
+    content: [
+      "Trata-se de consulta acerca da situação jurídica descrita, para a qual apresentamos a análise e as considerações a seguir.",
+      "Diante do exposto, opinamos pela viabilidade da medida pretendida, observadas as ressalvas e recomendações constantes deste parecer.",
+    ],
   },
 ];
 
@@ -394,6 +426,30 @@ const main = async () => {
         where: { name: template.name },
       });
 
+      // A revisão publicada (`currentVersion`) só existe quando o próprio
+      // template nasce ATIVO no seed — sem isto, um template "publicado"
+      // ficaria com `currentVersion: 0`, um estado que o fluxo real de
+      // publicação nunca produz.
+      const currentVersion = template.status === TemplateStatus.ATIVO ? 1 : 0;
+
+      const templateId = existing
+        ? existing.id
+        : (
+            await prisma.template.create({
+              data: {
+                name: template.name,
+                description: template.description,
+                category: template.category,
+                legalArea: template.legalArea,
+                status: template.status,
+                currentVersion,
+                createdById: adminUser.id,
+                updatedById: adminUser.id,
+              },
+              select: { id: true },
+            })
+          ).id;
+
       if (existing) {
         await prisma.template.update({
           where: { id: existing.id },
@@ -402,21 +458,50 @@ const main = async () => {
             category: template.category,
             legalArea: template.legalArea,
             status: template.status,
+            currentVersion,
             deletedAt: null,
           },
         });
-      } else {
-        await prisma.template.create({
+      }
+
+      // O rascunho/versão só é gravado se ainda não existir: reexecutar o
+      // seed não deve sobrescrever um conteúdo que a equipe já editou pela
+      // própria tela do editor.
+      const hasDraft = await prisma.templateDraft.findUnique({
+        where: { templateId },
+        select: { templateId: true },
+      });
+
+      if (!hasDraft) {
+        const contentJson = buildSeedDocument(template.content);
+        const contentHtml = generateHTML(contentJson, legalEditorExtensions);
+        const documentPayload = {
+          contentJson,
+          contentHtml,
+          variables: [],
+          signatures: [],
+          pageSettings: defaultPageSettings(),
+        };
+
+        await prisma.templateDraft.create({
           data: {
-            name: template.name,
-            description: template.description,
-            category: template.category,
-            legalArea: template.legalArea,
-            status: template.status,
-            createdById: adminUser.id,
+            templateId,
+            revision: 1,
+            ...documentPayload,
             updatedById: adminUser.id,
           },
         });
+
+        if (template.status === TemplateStatus.ATIVO) {
+          await prisma.templateVersion.create({
+            data: {
+              templateId,
+              version: 1,
+              ...documentPayload,
+              createdById: adminUser.id,
+            },
+          });
+        }
       }
 
       console.log(`✓ ${template.name}`);

@@ -11,7 +11,11 @@ export type TemplateUpsertMode = "create" | "edit";
 
 export type TemplateView = "editor" | "preview";
 
-export type AutosaveState = "idle" | "saving" | "saved" | "error";
+/**
+ * `clean`: nada a reportar — carregamento inicial, ou logo após salvar sem
+ * nenhuma edição posterior. Não exibe indicador nenhum.
+ */
+export type SaveState = "clean" | "dirty" | "saving" | "saved" | "error";
 
 export type TemplateVariableSource = "CLIENT" | "CASE" | "OFFICE" | "DOCUMENT";
 

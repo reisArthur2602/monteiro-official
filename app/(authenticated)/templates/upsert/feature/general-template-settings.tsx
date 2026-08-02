@@ -32,6 +32,19 @@ export const GeneralTemplateSettings = () => {
 
   return (
     <FieldGroup>
+      <Field data-invalid={Boolean(errors.name)}>
+        <FieldLabel htmlFor="template-name">Nome do template</FieldLabel>
+
+        <Input
+          id="template-name"
+          maxLength={160}
+          aria-invalid={Boolean(errors.name)}
+          {...register("name")}
+        />
+
+        {errors.name ? <FieldError>{errors.name.message}</FieldError> : null}
+      </Field>
+
       <Field data-invalid={Boolean(errors.description)}>
         <FieldLabel htmlFor="template-description">Descrição</FieldLabel>
 

@@ -155,22 +155,72 @@ export const ClientIdentificationPanel = () => {
         </Field>
 
         {isNaturalPerson ? (
-          <Field data-invalid={Boolean(errors.birthDate)}>
-            <FieldLabel htmlFor="client-birth-date">
-              Data de nascimento
-            </FieldLabel>
+          <>
+            <Field data-invalid={Boolean(errors.birthDate)}>
+              <FieldLabel htmlFor="client-birth-date">
+                Data de nascimento
+              </FieldLabel>
 
-            <Input
-              id="client-birth-date"
-              type="date"
-              aria-invalid={Boolean(errors.birthDate)}
-              {...register("birthDate")}
-            />
+              <Input
+                id="client-birth-date"
+                type="date"
+                aria-invalid={Boolean(errors.birthDate)}
+                {...register("birthDate")}
+              />
 
-            {errors.birthDate ? (
-              <FieldError>{errors.birthDate.message}</FieldError>
-            ) : null}
-          </Field>
+              {errors.birthDate ? (
+                <FieldError>{errors.birthDate.message}</FieldError>
+              ) : null}
+            </Field>
+
+            <Field data-invalid={Boolean(errors.rgNumber)}>
+              <FieldLabel htmlFor="client-rg-number">RG</FieldLabel>
+
+              <Input
+                id="client-rg-number"
+                maxLength={20}
+                aria-invalid={Boolean(errors.rgNumber)}
+                {...register("rgNumber")}
+              />
+
+              {errors.rgNumber ? (
+                <FieldError>{errors.rgNumber.message}</FieldError>
+              ) : null}
+            </Field>
+
+            <Field data-invalid={Boolean(errors.nationality)}>
+              <FieldLabel htmlFor="client-nationality">
+                Nacionalidade
+              </FieldLabel>
+
+              <Input
+                id="client-nationality"
+                placeholder="Brasileira"
+                maxLength={60}
+                aria-invalid={Boolean(errors.nationality)}
+                {...register("nationality")}
+              />
+
+              {errors.nationality ? (
+                <FieldError>{errors.nationality.message}</FieldError>
+              ) : null}
+            </Field>
+
+            <Field data-invalid={Boolean(errors.profession)}>
+              <FieldLabel htmlFor="client-profession">Profissão</FieldLabel>
+
+              <Input
+                id="client-profession"
+                maxLength={120}
+                aria-invalid={Boolean(errors.profession)}
+                {...register("profession")}
+              />
+
+              {errors.profession ? (
+                <FieldError>{errors.profession.message}</FieldError>
+              ) : null}
+            </Field>
+          </>
         ) : (
           <>
             <Field data-invalid={Boolean(errors.stateRegistration)}>

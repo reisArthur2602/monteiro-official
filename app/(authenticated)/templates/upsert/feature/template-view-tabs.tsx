@@ -28,8 +28,16 @@ export const TemplateViewTabs = () => {
   return (
     <div className="sticky top-14 z-20 mb-4 flex min-h-12 items-center justify-between gap-4 rounded-xl border bg-card/95 p-1.5 backdrop-blur-sm">
       <TabsList className="shrink-0">
-        <TabsTrigger value="editor">Editar</TabsTrigger>
-        <TabsTrigger value="preview">Prévia</TabsTrigger>
+        <TabsTrigger value="editor" className="data-active:text-primary data-active:font-semibold">
+          Editar
+        </TabsTrigger>
+
+        <TabsTrigger
+          value="preview"
+          className="data-active:text-primary data-active:font-semibold"
+        >
+          Prévia
+        </TabsTrigger>
       </TabsList>
 
       <span className="hidden font-mono text-[10px] text-muted-foreground lg:inline">

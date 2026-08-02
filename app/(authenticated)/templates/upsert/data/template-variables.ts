@@ -39,6 +39,27 @@ export const templateVariables: TemplateVariableDefinition[] = [
     sampleValue: "mariana.souza@exemplo.com.br",
   },
   {
+    key: "cliente.profissao",
+    label: "Profissão",
+    source: "CLIENT",
+    group: "Cliente",
+    sampleValue: "Engenheira civil",
+  },
+  {
+    key: "cliente.nacionalidade",
+    label: "Nacionalidade",
+    source: "CLIENT",
+    group: "Cliente",
+    sampleValue: "Brasileira",
+  },
+  {
+    key: "cliente.rg",
+    label: "RG",
+    source: "CLIENT",
+    group: "Cliente",
+    sampleValue: "12.345.678-9",
+  },
+  {
     key: "processo.numero",
     label: "Número do processo",
     source: "CASE",

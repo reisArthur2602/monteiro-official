@@ -68,6 +68,9 @@ export const clientFormSchema = z
     document: z.string().trim().regex(/^\d+$/, "Informe apenas números"),
 
     birthDate: optionalText(10),
+    profession: optionalText(120),
+    nationality: optionalText(60),
+    rgNumber: optionalText(20),
     stateRegistration: optionalText(30),
     municipalRegistration: optionalText(30),
 
@@ -105,12 +108,21 @@ export const clientFormSchema = z
       });
     }
 
-    if (values.type === "PESSOA_JURIDICA" && values.birthDate) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["birthDate"],
-        message: "Data de nascimento se aplica apenas a pessoa física",
-      });
+    if (values.type === "PESSOA_JURIDICA") {
+      for (const field of [
+        "birthDate",
+        "profession",
+        "nationality",
+        "rgNumber",
+      ] as const) {
+        if (values[field]) {
+          ctx.addIssue({
+            code: "custom",
+            path: [field],
+            message: "Campo se aplica apenas a pessoa física",
+          });
+        }
+      }
     }
 
     if (values.type === "PESSOA_FISICA") {

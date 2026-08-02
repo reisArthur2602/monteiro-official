@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { DocumentPrintStyles } from "@/components/shared/documents/document-print-styles";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -8,6 +9,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useLegalEditor } from "../hooks/use-legal-editor";
 import type { TemplateView } from "../types/template-types";
 import { TemplateEditorView } from "./template-editor-view";
+import { useTemplateUpsert } from "./template-form-provider";
 import { TemplateMobileActions } from "./template-mobile-actions";
 import { TemplatePreviewView } from "./template-preview-view";
 import { TemplatePublishDialog } from "./template-publish-dialog";
@@ -27,6 +29,7 @@ export const TemplateUpsertScreen = () => {
   const [previewZoom, setPreviewZoom] = useState(DEFAULT_PREVIEW_ZOOM);
 
   const { editor, syncToForm } = useLegalEditor();
+  const { isDirty, save } = useTemplateUpsert();
 
   const openVariables = useCallback(() => setVariablesOpen(true), []);
   const openSettings = useCallback(() => setSettingsOpen(true), []);
@@ -34,21 +37,48 @@ export const TemplateUpsertScreen = () => {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const isShortcut =
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey &&
-        event.key.toLowerCase() === "v";
+      const isModifier = event.ctrlKey || event.metaKey;
 
-      if (isShortcut) {
+      if (isModifier && event.shiftKey && event.key.toLowerCase() === "v") {
         event.preventDefault();
         setVariablesOpen(true);
+        return;
+      }
+
+      if (isModifier && !event.shiftKey && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        save().then((saved) => {
+          if (!saved) {
+            toast.error("Não foi possível salvar o template");
+          }
+        });
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
 
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [save]);
+
+  useEffect(() => {
+    // Único mecanismo que cobre fechar a aba, atualizar a página ou
+    // navegar pelo histórico do navegador — os links de saída da própria
+    // tela (botão "Templates" na topbar) já têm sua própria confirmação em
+    // `template-topbar.tsx`, porque navegação do Next.js não dispara este
+    // evento.
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!isDirty) {
+        return;
+      }
+
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
 
   return (
     <div className="-m-4 flex min-h-[calc(100dvh-4rem)] flex-col sm:-m-6 lg:-m-8">

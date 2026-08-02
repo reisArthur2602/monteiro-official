@@ -14,12 +14,10 @@ import type { TemplateStatus } from "@/app/generated/prisma/enums";
 import type { OfficeProfile } from "@/components/shared/documents/document-types";
 
 import { publishTemplateVersion } from "../actions/publish-template-version";
-import {
-  type UseTemplateAutosaveResult,
-  useTemplateAutosave,
-} from "../hooks/use-template-autosave";
+import { useTemplateSave } from "../hooks/use-template-save";
 import { templateFormSchema } from "../schemas/template-form-schema";
 import type {
+  SaveState,
   TemplateFormValues,
   TemplateUpsertMode,
 } from "../types/template-types";
@@ -33,10 +31,11 @@ type TemplateUpsertContextValue = {
   status: TemplateStatus;
   office: OfficeProfile;
   isPublishing: boolean;
-  autosave: Pick<
-    UseTemplateAutosaveResult,
-    "autosaveState" | "autosaveMessage" | "flush"
-  >;
+  isDirty: boolean;
+  saveState: SaveState;
+  saveMessage: string;
+  /** Grava o rascunho pendente sob demanda — nunca dispara sozinho. */
+  save: () => Promise<boolean>;
 };
 
 const TemplateUpsertContext = createContext<TemplateUpsertContextValue | null>(
@@ -104,7 +103,14 @@ export const TemplateFormProvider = ({
     setRevision(createdRevision);
   };
 
-  const autosave = useTemplateAutosave({
+  const {
+    isDirty,
+    saveState,
+    saveMessage,
+    save,
+    getRevision,
+    getTemplateId,
+  } = useTemplateSave({
     form,
     templateId,
     revision,
@@ -112,16 +118,15 @@ export const TemplateFormProvider = ({
     onRevisionChanged: setRevision,
   });
 
-  const { flush, setPaused } = autosave;
-
   const handlePublish = async (values: TemplateFormValues) => {
     setIsPublishing(true);
-    setPaused(true);
 
     try {
       // Garante que o rascunho pendente esteja gravado — e, no modo de
-      // criação, que o template exista — antes de versionar.
-      const saved = await flush();
+      // criação, que o template exista — antes de versionar. Publicar sem
+      // isso não é uma ação destrutiva a confirmar: é sempre "salvar a
+      // mais", então acontece direto, sem diálogo extra.
+      const saved = await save();
 
       if (!saved) {
         toast.error(
@@ -130,7 +135,10 @@ export const TemplateFormProvider = ({
         return;
       }
 
-      const targetId = values.id ?? templateId;
+      // Lido das refs do hook, não do fechamento: se `save()` acabou de
+      // criar o template ou gravar uma revisão nova, o `templateId`/
+      // `revision` deste componente só reflete isso no próximo render.
+      const targetId = values.id ?? getTemplateId() ?? templateId;
 
       if (!targetId) {
         toast.error("O rascunho ainda não foi criado. Tente novamente.");
@@ -139,7 +147,7 @@ export const TemplateFormProvider = ({
 
       const result = await publishTemplateVersion({
         templateId: targetId,
-        revision,
+        revision: getRevision(),
         values,
       });
 
@@ -154,7 +162,6 @@ export const TemplateFormProvider = ({
       toast.success(result.message);
     } finally {
       setIsPublishing(false);
-      setPaused(false);
     }
   };
 
@@ -165,11 +172,10 @@ export const TemplateFormProvider = ({
     status,
     office,
     isPublishing,
-    autosave: {
-      autosaveState: autosave.autosaveState,
-      autosaveMessage: autosave.autosaveMessage,
-      flush: autosave.flush,
-    },
+    isDirty,
+    saveState,
+    saveMessage,
+    save,
   };
 
   return (
