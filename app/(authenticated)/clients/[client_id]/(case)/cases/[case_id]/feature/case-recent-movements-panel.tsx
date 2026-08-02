@@ -1,19 +1,34 @@
 import { GitCommitHorizontal } from 'lucide-react';
+import Link from 'next/link';
 
+import { buildCaseMovementsHref } from '../movements/utils/build-case-movements-href';
 import type { CaseOverview } from '../queries/get-case-overview';
 import { formatDateTime } from '../utils/format-date-time';
 
 type CaseRecentMovementsPanelProps = {
+    clientId: string;
+    caseId: string;
     movements: CaseOverview['recentMovements'];
 };
 
-export const CaseRecentMovementsPanel = ({ movements }: CaseRecentMovementsPanelProps) => (
+export const CaseRecentMovementsPanel = ({
+    clientId,
+    caseId,
+    movements,
+}: CaseRecentMovementsPanelProps) => (
     <section className="overflow-hidden rounded-xl border bg-card">
-        <header className="flex min-h-14 items-center border-b px-4 py-3">
+        <header className="flex min-h-14 items-center justify-between gap-3 border-b px-4 py-3">
             <div>
                 <h2 className="text-sm font-semibold">Movimentações recentes</h2>
                 <p className="mt-0.5 text-xs text-muted-foreground">Últimos registros do andamento processual.</p>
             </div>
+
+            <Link
+                href={buildCaseMovementsHref(clientId, caseId)}
+                className="shrink-0 text-xs font-semibold text-primary hover:underline"
+            >
+                Ver todas
+            </Link>
         </header>
 
         <div className="p-4">

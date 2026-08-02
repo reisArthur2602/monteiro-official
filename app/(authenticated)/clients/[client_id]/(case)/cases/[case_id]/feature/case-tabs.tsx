@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 
 import { buildClientCaseHref } from '../../../../(client)/cases/utils/build-cases-href';
 import { buildCaseDocsHref } from '../docs/utils/build-case-docs-href';
+import { buildCaseMovementsHref } from '../movements/utils/build-case-movements-href';
 
 type CaseTabsProps = {
     clientId: string;
@@ -14,14 +15,15 @@ type CaseTabsProps = {
 };
 
 /**
- * Abas do processo. Movimentações, Prazos, Partes e Atividade ganham aba
- * quando a rota de cada uma existir, para não linkar para lugar nenhum.
+ * Abas do processo. Prazos, Partes e Atividade ganham aba quando a rota de
+ * cada uma existir, para não linkar para lugar nenhum.
  */
 export const CaseTabs = ({ clientId, caseId }: CaseTabsProps) => {
     const pathname = usePathname();
 
     const tabs = [
         { label: 'Visão geral', href: buildClientCaseHref(clientId, caseId) },
+        { label: 'Movimentações', href: buildCaseMovementsHref(clientId, caseId) },
         { label: 'Documentos', href: buildCaseDocsHref(clientId, caseId) },
     ];
 

@@ -71,7 +71,11 @@ const CasePage = async ({ params }: CasePageProps) => {
                 <div className="grid gap-4">
                     <CaseInfoPanel item={item} />
                     <CaseOriginPanel clientId={parsedClientId.data} attendanceForm={item.attendanceForm} />
-                    <CaseRecentMovementsPanel movements={item.recentMovements} />
+                    <CaseRecentMovementsPanel
+                        clientId={parsedClientId.data}
+                        caseId={parsedCaseId.data}
+                        movements={item.recentMovements}
+                    />
                 </div>
 
                 <aside className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
