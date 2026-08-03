@@ -1,19 +1,23 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
-import { buildClientHref, buildClientIntakesHref } from '../../../utils/build-clients-href';
-import { buildClientCasesHref } from '../cases/utils/build-cases-href';
-import { buildClientDocsHref } from '../docs/utils/build-docs-href';
+import {
+  buildClientHref,
+  buildClientIntakesHref,
+  buildClientTemplatesHref,
+} from "../../../utils/build-clients-href";
+import { buildClientCasesHref } from "../cases/utils/build-cases-href";
+import { buildClientDocsHref } from "../docs/utils/build-docs-href";
 
 type ClientTabsProps = {
-    clientId: string;
-    intakesCount: number;
-    documentsCount: number;
-    casesCount: number;
+  clientId: string;
+  intakesCount: number;
+  documentsCount: number;
+  casesCount: number;
 };
 
 /**
@@ -22,60 +26,65 @@ type ClientTabsProps = {
  * linkar para lugar nenhum.
  */
 export const ClientTabs = ({
-    clientId,
-    intakesCount,
-    documentsCount,
-    casesCount,
+  clientId,
+  intakesCount,
+  documentsCount,
+  casesCount,
 }: ClientTabsProps) => {
-    const pathname = usePathname();
+  const pathname = usePathname();
 
-    const tabs = [
-        { label: 'Visão geral', href: buildClientHref(clientId), count: null },
-        {
-            label: 'Processos',
-            href: buildClientCasesHref(clientId),
-            count: casesCount,
-        },
-        {
-            label: 'Documentos',
-            href: buildClientDocsHref(clientId),
-            count: documentsCount,
-        },
-        {
-            label: 'Fichas',
-            href: buildClientIntakesHref(clientId),
-            count: intakesCount,
-        },
-    ];
+  const tabs = [
+    { label: "Visão geral", href: buildClientHref(clientId), count: null },
+    {
+      label: "Processos",
+      href: buildClientCasesHref(clientId),
+      count: casesCount,
+    },
+    {
+      label: "Documentos",
+      href: buildClientDocsHref(clientId),
+      count: documentsCount,
+    },
+    {
+      label: "Fichas",
+      href: buildClientIntakesHref(clientId),
+      count: intakesCount,
+    },
+    {
+      label: "Modelos",
+      href: buildClientTemplatesHref(clientId),
+      count: null,
+    },
+  ];
 
-    return (
-        <nav
-            aria-label="Navegação do cliente"
-            className="sticky top-16 z-20 -mx-4 flex gap-1 overflow-x-auto border-b bg-background/95 px-4 backdrop-blur-sm sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
-        >
-            {tabs.map((tab) => {
-                const isActive = pathname === tab.href;
+  return (
+    <nav
+      aria-label="Navegação do cliente"
+      className="sticky top-16 z-20 -mx-4 flex gap-1 overflow-x-auto border-b bg-background/95 px-4 backdrop-blur-sm sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+    >
+      {tabs.map((tab) => {
+        const isActive = pathname === tab.href;
 
-                return (
-                    <Link
-                        key={tab.href}
-                        href={tab.href}
-                        aria-current={isActive ? 'page' : undefined}
-                        className={cn(
-                            'relative flex min-h-11 items-center gap-2 border-b-2 border-transparent px-3 text-sm font-semibold whitespace-nowrap text-muted-foreground hover:text-foreground',
-                            isActive && 'border-primary text-foreground'
-                        )}
-                    >
-                        {tab.label}
+        return (
+          <Link
+            key={tab.href}
+            href={tab.href}
+            aria-current={isActive ? "page" : undefined}
+            className={cn(
+              "relative flex min-h-11 items-center gap-2 border-b-2 border-transparent px-3 text-sm font-semibold whitespace-nowrap text-muted-foreground hover:text-foreground",
+              isActive && "border-primary text-foreground",
+            )}
+          >
+            {tab.label}
 
-                        {tab.count !== null ? (
-                            <span className="grid h-5 min-w-5 place-items-center rounded-full bg-muted px-1 font-mono text-[10px] text-muted-foreground">
-                                {tab.count}
-                            </span>
-                        ) : null}
-                    </Link>
-                );
-            })}
-        </nav>
-    );
+            {tab.count !== null ? (
+              <span className="grid h-5 min-w-5 place-items-center rounded-full bg-muted px-1 font-mono text-[10px] text-muted-foreground">
+                {tab.count}
+              </span>
+            ) : null}
+          </Link>
+        );
+      })}
+    </nav>
+  );
 };

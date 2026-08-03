@@ -15,6 +15,10 @@ export const buildClientHref = (clientId: string) =>
 export const buildClientIntakesHref = (clientId: string) =>
   `${buildClientHref(clientId)}/intakes`;
 
+/** Rota do catálogo de modelos disponíveis para o cliente. */
+export const buildClientTemplatesHref = (clientId: string) =>
+  `${buildClientHref(clientId)}/templates`;
+
 /**
  * Monta a URL da listagem preservando apenas os filtros ativos.
  * A página só entra na query string a partir da segunda.
