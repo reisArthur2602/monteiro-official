@@ -211,7 +211,7 @@
   }
 
   /*
-   * `LegalDocumentPaginatedFrame` empilha N folhas dentro de
+   * `PaginatedDocumentSheets` empilha N folhas dentro de
    * `[data-paginated-document-root]`. A regra acima foi escrita para uma
    * folha só — com várias, `position: absolute; top: 0` em cada uma
    * imprimiria todas sobrepostas na mesma posição. Aqui a raiz assume o

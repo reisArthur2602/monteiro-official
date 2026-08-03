@@ -1,7 +1,7 @@
 "use client";
 
 import { Minus, Plus, Printer } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { LegalDocumentPaginatedFrame } from "@/components/shared/documents/legal-document-paginated-frame";
@@ -55,6 +55,11 @@ export const TemplatePreviewView = ({
 
     return () => clearTimeout(timeout);
   }, [contentHtml]);
+
+  // As assinaturas entram na medição da moldura; um array recriado a cada
+  // render faria a folha ser remedida a cada passo do zoom sem nenhuma
+  // mudança real no documento.
+  const resolvedSignatures = useMemo(() => signatures ?? [], [signatures]);
 
   const zoomOut = () => onZoomChange(Math.max(MIN_ZOOM, zoom - ZOOM_STEP));
   const zoomIn = () => onZoomChange(Math.min(MAX_ZOOM, zoom + ZOOM_STEP));
@@ -132,7 +137,7 @@ export const TemplatePreviewView = ({
           <LegalDocumentPaginatedFrame
             office={office}
             page={page}
-            signatures={signatures ?? []}
+            signatures={resolvedSignatures}
             html={resolvedHtml}
             variableValues={templateVariableSampleValues}
           />
