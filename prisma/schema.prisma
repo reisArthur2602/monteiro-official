@@ -40,6 +40,8 @@ model User {
   passwordHash String   @map("password_hash") @db.VarChar(255)
   role         UserRole @default(COLABORADOR)
 
+  lastLoginAt DateTime? @map("last_login_at") @db.Timestamptz(3)
+
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
@@ -76,8 +78,38 @@ model User {
 
   processActivities ProcessActivity[] @relation("ProcessActivityActor")
 
+  invitationsSent UserInvitation[] @relation("UserInvitationInvitedBy")
+
   @@index([deletedAt])
   @@map("users")
+}
+
+/// Convite pendente para um novo usuário definir a própria senha e entrar no
+/// sistema. Não vira `User` até o convite ser aceito — até lá, é só isto:
+/// nome, e-mail e função reservados, mais um token de aceite.
+model UserInvitation {
+  id String @id @default(uuid()) @db.Uuid
+
+  name  String   @db.VarChar(150)
+  email String   @db.VarChar(254)
+  role  UserRole @default(COLABORADOR)
+
+  /// Hash do token enviado por e-mail — o valor em si nunca é gravado, pelo
+  /// mesmo motivo de uma senha: um vazamento do banco não pode virar acesso.
+  tokenHash String @unique @map("token_hash") @db.VarChar(64)
+
+  invitedById String @map("invited_by_id") @db.Uuid
+  invitedBy   User   @relation("UserInvitationInvitedBy", fields: [invitedById], references: [id], onDelete: Restrict)
+
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  acceptedAt DateTime? @map("accepted_at") @db.Timestamptz(3)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([email])
+  @@index([expiresAt])
+  @@map("user_invitations")
 }
 
 model Template {

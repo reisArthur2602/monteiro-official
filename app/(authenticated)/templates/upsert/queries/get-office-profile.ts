@@ -36,3 +36,12 @@ export const getOfficeProfile = cache(async (): Promise<OfficeProfile> => {
 
   return OFFICE_PROFILE;
 });
+
+/**
+ * Mesmo dado, sem exigir sessão — para as poucas telas fora de
+ * `(authenticated)` que precisam do nome/e-mail do escritório (ex.: a
+ * página pública de aceite de convite). Nada aqui é sensível: é a mesma
+ * informação institucional que já aparece impressa no rodapé de qualquer
+ * documento gerado.
+ */
+export const getPublicOfficeProfile = (): OfficeProfile => OFFICE_PROFILE;

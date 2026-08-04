@@ -56,6 +56,12 @@ export const login = async (input: LoginInput): Promise<ActionResult<null>> => {
 
     const token = await signSessionToken({ sub: user.id });
 
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+      select: { id: true },
+    });
+
     const cookieStore = await cookies();
 
     cookieStore.set(SESSION_COOKIE_NAME, token, {
