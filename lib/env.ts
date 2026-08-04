@@ -31,6 +31,14 @@ const envSchema = z.object({
 
   /** Diretório raiz onde os arquivos da aplicação são gravados. */
   FTP_BASE_DIR: z.string().min(1).default("/monteiro"),
+
+  /**
+   * E-mail transacional (Resend). Opcionais de propósito: sem essas duas
+   * variáveis, o envio de documentos por e-mail fica desabilitado na
+   * interface em vez de o app falhar ao iniciar.
+   */
+  RESEND_API_KEY: z.string().min(1).optional(),
+  RESEND_FROM_EMAIL: z.email().optional(),
 });
 
 export const env = envSchema.parse({
@@ -43,4 +51,6 @@ export const env = envSchema.parse({
   FTP_SECURE: process.env.FTP_SECURE,
   FTP_REJECT_UNAUTHORIZED: process.env.FTP_REJECT_UNAUTHORIZED,
   FTP_BASE_DIR: process.env.FTP_BASE_DIR,
+  RESEND_API_KEY: process.env.RESEND_API_KEY,
+  RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
 });

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getOfficeProfile } from "@/app/(authenticated)/templates/upsert/queries/get-office-profile";
 import { templateCategoryLabels } from "@/app/(authenticated)/templates/utils/template-labels";
 import { Badge } from "@/components/ui/badge";
+import { isMailerConfigured } from "@/lib/mailer";
 
 import { getClientContext } from "../../queries/get-client-context";
 import { clientIdSchema } from "../../schemas/client-id-schema";
@@ -12,6 +13,7 @@ import {
   resolveClientTemplateVariableValues,
   usesCaseVariables,
 } from "../utils/resolve-client-template-variables";
+import { ClientTemplateEmailDialog } from "./feature/client-template-email-dialog";
 import { ClientTemplatePreview } from "./feature/client-template-preview";
 import { ClientTemplateReadinessAlert } from "./feature/client-template-readiness-alert";
 import { getClientUsableTemplate } from "./queries/get-client-usable-template";
@@ -69,30 +71,48 @@ const ClientTemplatePreviewPage = async ({
     office,
   );
 
+  const canSendEmail = isMailerConfigured();
+
   return (
     <div className="grid gap-4">
-      <header className="grid gap-1.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline">
-            {templateCategoryLabels[template.category]}
-          </Badge>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="grid gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline">
+              {templateCategoryLabels[template.category]}
+            </Badge>
 
-          {template.legalArea ? (
-            <span className="font-mono text-xs text-muted-foreground uppercase">
-              {template.legalArea}
-            </span>
+            {template.legalArea ? (
+              <span className="font-mono text-xs text-muted-foreground uppercase">
+                {template.legalArea}
+              </span>
+            ) : null}
+          </div>
+
+          <h2 className="font-heading text-2xl font-semibold tracking-tight">
+            {template.name}
+          </h2>
+
+          {template.description ? (
+            <p className="text-sm text-muted-foreground">
+              {template.description}
+            </p>
           ) : null}
         </div>
 
-        <h2 className="font-heading text-2xl font-semibold tracking-tight">
-          {template.name}
-        </h2>
-
-        {template.description ? (
-          <p className="text-sm text-muted-foreground">
-            {template.description}
+        {canSendEmail ? (
+          <ClientTemplateEmailDialog
+            clientId={client.id}
+            templateId={template.id}
+            templateName={template.name}
+            clientName={client.displayName ?? client.name}
+            clientEmail={client.email}
+          />
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Envio de e-mail ainda não configurado nesta instalação.
           </p>
-        ) : null}
+        )}
       </header>
 
       <ClientTemplateReadinessAlert
