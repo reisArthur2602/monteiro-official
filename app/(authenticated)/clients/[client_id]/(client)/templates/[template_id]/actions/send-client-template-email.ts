@@ -1,7 +1,12 @@
 "use server";
 
 import { getOfficeProfile } from "@/app/(authenticated)/templates/upsert/queries/get-office-profile";
+import { buildDocumentEmailHtml } from "@/components/shared/documents/build-document-email-html";
 import { isMailerConfigured, sendEmail } from "@/lib/mailer";
+import {
+  type SendDocumentEmailInput,
+  sendDocumentEmailSchema,
+} from "@/schemas/document-email/send-document-email-schema";
 import type { ActionResult } from "@/utils";
 import { verifyAuth } from "@/utils/auth";
 
@@ -10,11 +15,6 @@ import { clientIdSchema } from "../../../schemas/client-id-schema";
 import { resolveClientTemplateVariableValues } from "../../utils/resolve-client-template-variables";
 import { getClientUsableTemplate } from "../queries/get-client-usable-template";
 import { clientTemplateIdSchema } from "../schemas/client-template-id-schema";
-import {
-  type SendClientTemplateEmailInput,
-  sendClientTemplateEmailSchema,
-} from "../schemas/send-client-template-email-schema";
-import { buildClientTemplateEmailHtml } from "../utils/build-client-template-email-html";
 import { resolveDocumentVariablesServer } from "../utils/resolve-document-variables-server";
 
 /**
@@ -30,7 +30,7 @@ import { resolveDocumentVariablesServer } from "../utils/resolve-document-variab
 export const sendClientTemplateEmail = async (
   rawClientId: string,
   rawTemplateId: string,
-  input: SendClientTemplateEmailInput,
+  input: SendDocumentEmailInput,
 ): Promise<ActionResult<null>> => {
   try {
     await verifyAuth();
@@ -49,7 +49,7 @@ export const sendClientTemplateEmail = async (
       return { ok: false, message: "Cliente ou modelo inválido" };
     }
 
-    const parsed = sendClientTemplateEmailSchema.safeParse(input);
+    const parsed = sendDocumentEmailSchema.safeParse(input);
 
     if (!parsed.success) {
       return {
@@ -80,9 +80,10 @@ export const sendClientTemplateEmail = async (
       variableValues,
     );
 
-    const emailHtml = buildClientTemplateEmailHtml({
+    const emailHtml = buildDocumentEmailHtml({
       message: parsed.data.message,
       documentHtml: resolvedDocumentHtml,
+      documentTitle: template.name,
     });
 
     await sendEmail({

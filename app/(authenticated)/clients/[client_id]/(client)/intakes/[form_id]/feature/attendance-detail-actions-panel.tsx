@@ -12,6 +12,7 @@ import {
   buildIntakesHref,
   buildIntakeUpsertHref,
 } from "../../utils/build-intakes-href";
+import { AttendanceEmailDialog } from "./attendance-email-dialog";
 import { PrintButton } from "./print-button";
 
 type AttendanceDetailActionsPanelProps = {
@@ -20,6 +21,10 @@ type AttendanceDetailActionsPanelProps = {
   status: AttendanceFormStatus;
   /** Presente quando esta ficha já originou um processo. */
   caseId: string | null;
+  canSendEmail: boolean;
+  subject: string;
+  clientName: string;
+  clientEmail: string | null;
 };
 
 export const AttendanceDetailActionsPanel = ({
@@ -27,6 +32,10 @@ export const AttendanceDetailActionsPanel = ({
   formId,
   status,
   caseId,
+  canSendEmail,
+  subject,
+  clientName,
+  clientEmail,
 }: AttendanceDetailActionsPanelProps) => (
   <section className="overflow-hidden rounded-xl border bg-card">
     <header className="flex min-h-14 items-center border-b px-4 py-3">
@@ -75,6 +84,17 @@ export const AttendanceDetailActionsPanel = ({
       </Button>
 
       <PrintButton fullWidth />
+
+      {canSendEmail ? (
+        <AttendanceEmailDialog
+          clientId={clientId}
+          formId={formId}
+          subject={subject}
+          clientName={clientName}
+          clientEmail={clientEmail}
+          triggerClassName="w-full"
+        />
+      ) : null}
 
       <Button asChild variant="outline">
         <Link href={buildIntakesHref(clientId, {})}>Voltar para fichas</Link>
